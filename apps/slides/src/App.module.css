@@ -1,0 +1,28 @@
+.app {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-height: 100vh;
+  padding: var(--space-5);
+  background: var(--color-bg-base);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-size-emphasis);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-fg-primary);
+}
+
+.workspace {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: var(--space-4);
+}

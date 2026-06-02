@@ -1,0 +1,17 @@
+.stage {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  overflow: auto;
+}
+
+/* The slide is a document page — kept white regardless of app theme. */
+.stage canvas {
+  background: white;
+  border: 1px solid var(--color-border);
+}

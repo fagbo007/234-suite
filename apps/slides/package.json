@@ -7,11 +7,13 @@
     "dev": "vite",
     "build": "vite build",
     "test": "vitest run",
-    "bench": "echo \"234 Slides: no Phase 1 benchmarks yet — see apps/slides/CLAUDE.md\"",
+    "bench": "vitest bench --run",
     "typecheck": "tsc -b"
   },
   "dependencies": {
     "@234/shared": "workspace:*",
+    "@tabler/icons-react": "^3.26.0",
+    "fabric": "^6.5.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
