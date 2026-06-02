@@ -32,4 +32,24 @@ describe('SheetEngine', () => {
     expect(engine.getValue(0, 0)).toBe(2);
     expect(engine.usedRange().rows).toBeGreaterThanOrEqual(1);
   });
+
+  it('honours operator precedence and parentheses', () => {
+    engine = new SheetEngine();
+    engine.setCell(0, 0, '=2+3*4');
+    engine.setCell(0, 1, '=(2+3)*4');
+    engine.setCell(0, 2, '=2^3^2'); // right-associative → 2^9 = 512
+    expect(engine.getValue(0, 0)).toBe(14);
+    expect(engine.getValue(0, 1)).toBe(20);
+    expect(engine.getValue(0, 2)).toBe(512);
+  });
+
+  it('reports errors as Excel-style codes', () => {
+    engine = new SheetEngine();
+    engine.setCell(0, 0, '=1/0');
+    engine.setCell(1, 0, '=FOO(1)'); // unsupported function
+    engine.setCell(2, 0, '=A3'); // self-reference (A3 === row 2, col 0)
+    expect(engine.getValue(0, 0)).toBe('#DIV/0!');
+    expect(engine.getValue(1, 0)).toBe('#NAME?');
+    expect(engine.getValue(2, 0)).toBe('#CYCLE!');
+  });
 });

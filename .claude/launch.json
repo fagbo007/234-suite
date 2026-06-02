@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "writer",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@234/writer", "dev", "--", "--port", "5173", "--strictPort"],
+      "port": 5173
+    },
+    {
+      "name": "sheet",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@234/sheet", "dev", "--", "--port", "5174", "--strictPort"],
+      "port": 5174
+    },
+    {
+      "name": "slides",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@234/slides", "dev", "--", "--port", "5175", "--strictPort"],
+      "port": 5175
+    }
+  ]
+}

@@ -1,49 +1,46 @@
-# HyperFormula compatibility table
+# 234 Sheet — formula support table
 
-> Required by root `CLAUDE.md` Section 3.3: built in Phase 1 **before any formula
-> feature work**. HyperFormula implements ~90% of Excel functions but not all.
-> **Do not implement a missing function by guessing** — surface it in the UI as
-> unsupported with a clear message, and track it here.
-
-> Path note: root §3.3 references `/apps/sheet/docs/formula-compat.md` while §4,
-> §14, and §15 reference `/docs/formula-compat.md`. This file uses the
-> majority path. Confirm the canonical location with the owner and keep one.
+> Canonical compat table (root `CLAUDE.md` §3.3, §4, §14, §15). 234 Sheet uses an
+> **in-house, MIT-licensed evaluator** (`/packages/formula-engine`), not
+> HyperFormula. Phase 1 supports a deliberately small set; broader coverage is a
+> Phase 2 concern (extend the evaluator or adopt formula.js, MIT).
+> **Do not implement a missing function by guessing** — the evaluator returns an
+> Excel-style error code and the UI surfaces it; track planned functions here.
 
 ---
 
 ## How to read this table
 
-- **Supported** — implemented by HyperFormula and exposed in 234 Sheet.
-- **Supported (Phase 2+)** — HyperFormula supports it; UI not surfaced yet.
-- **Unsupported** — not implemented by HyperFormula; the UI must show a clear
-  "function not supported" error rather than silently returning a wrong value.
+- **Supported** — implemented by the evaluator and exposed in 234 Sheet.
+- **Planned (Phase 2+)** — not yet implemented; the evaluator returns `#NAME?`
+  (unknown function) and the UI shows a clear "not supported yet" message.
 
 ## Phase 1 supported set
 
 | Feature | Status | Notes |
 |---|---|---|
-| Arithmetic `+ - * / ^` | Supported | Core Phase 1 |
-| `SUM` | Supported | Core Phase 1 |
-| `AVERAGE` | Supported | Core Phase 1 |
-| `COUNT` | Supported | Core Phase 1 |
-| Cell/range references | Supported | Stored as named refs / coordinates; A1 display-only (see `formula-refs.md`) |
+| Arithmetic `+ - * / ^`, parens, unary minus | Supported | Core Phase 1 |
+| `SUM` | Supported | Ranges + arguments |
+| `AVERAGE` | Supported | Ignores empty cells |
+| `COUNT` | Supported | Counts numeric values |
+| Cell / range references | Supported | Stored as named refs / coordinates; A1 display-only (see `formula-refs.md`) |
+| Error codes | Supported | `#DIV/0!`, `#NAME?` (unknown fn), `#CYCLE!`, `#VALUE!`, `#ERROR!` |
 
-## Common functions — support status (starter; extend as features land)
+## Planned functions (Phase 2+)
 
-| Function | HyperFormula | 234 Sheet phase |
-|---|---|---|
-| `SUMIF`, `COUNTIF`, `AVERAGEIF` | Supported | Phase 2+ |
-| `IF`, `AND`, `OR`, `NOT` | Supported | Phase 2+ |
-| `VLOOKUP`, `HLOOKUP`, `INDEX`, `MATCH` | Supported | Phase 2+ |
-| `XLOOKUP` | **Unsupported** | Show unsupported message |
-| `CONCATENATE`, `CONCAT`, `TEXTJOIN` | Supported | Phase 2+ |
-| `DATE`, `TODAY`, `NOW`, `DATEDIF` | Supported | Phase 2+ (with explicit date columns — no coercion, §2.2) |
-| `LET`, `LAMBDA` | **Unsupported** | Show unsupported message |
-| `DYNAMIC ARRAYS` / spill (`FILTER`, `SORT`, `UNIQUE`) | Partial / version-dependent | Verify against installed HyperFormula version before exposing |
+| Function group | 234 Sheet phase |
+|---|---|
+| `SUMIF`, `COUNTIF`, `AVERAGEIF` | Phase 2+ |
+| `IF`, `AND`, `OR`, `NOT` | Phase 2+ |
+| `VLOOKUP`, `HLOOKUP`, `INDEX`, `MATCH`, `XLOOKUP` | Phase 2+ |
+| `CONCATENATE`, `CONCAT`, `TEXTJOIN` | Phase 2+ |
+| `DATE`, `TODAY`, `NOW`, `DATEDIF` | Phase 2+ (with explicit date columns — no coercion, §2.2) |
+| Dynamic arrays / spill (`FILTER`, `SORT`, `UNIQUE`) | Phase 2+ |
 
 ## Maintenance
 
-- Verify each function against the **installed** HyperFormula version (its support
-  matrix changes between releases) before exposing it in the UI.
-- When marking a function unsupported, the formula bar / dialogs must show:
-  *"This function isn't supported yet."* — never evaluate a guess.
+- A function is "supported" only once implemented in `formula.ts` **and** covered
+  by a test. Until then it stays in the planned list and returns `#NAME?`.
+- When a function is unsupported, the formula bar / dialogs must show a clear
+  message — never evaluate a guess (root §3.3).
+- Phase 2 may add `formula.js` (MIT) for breadth; update this table when it lands.

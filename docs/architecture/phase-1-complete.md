@@ -58,29 +58,32 @@ window exists; thresholds were never weakened (Section 8, Section 16).
 These were consciously deferred (Section 17 "structure-first" decision) and are
 required by the strict Phase 1 completion criteria (Section 9):
 
-1. **Tauri windows + Rust backends** for each app (Rust toolchain not yet
-   installed). "Tauri window, React shell" is itself a Step 3–5 deliverable.
+1. **Tauri windows + Rust backends.** Writer's `src-tauri` is now scaffolded and
+   wired (v2 config, `tauri info` detects it) — but the **native compile/window
+   is blocked here**: this machine has **no MSVC C++ Build Tools** and no Rust
+   (confirmed by `tauri info`). Sheet/Slides backends follow once Writer's window
+   builds on an MSVC/Rust-equipped host. See `app-shell.md` §3a.
 2. **Suite launcher** binary launching the three isolated processes, and the
    per-platform installers (the latter are Phase 4).
 3. **CI execution on a GitHub remote** — the 3-platform matrix
-   (`.github/workflows/ci.yml`) is written and the commands it runs are green
-   locally, but no remote exists yet, so it has not actually run on
-   Windows/macOS/Linux.
+   (`.github/workflows/ci.yml`) is written and green locally, but **no remote
+   exists** (owner deferred), so it has not actually run on Windows/macOS/Linux.
 4. **In-browser/native validation** of the full render, 60fps scroll, and
    real-time canvas drag (the parts jsdom cannot measure).
 
-## 5. Open decisions for the owner (carried forward)
+## 5. Owner decisions — RESOLVED (2026-06-02)
 
-- ⚠️ **HyperFormula is GPLv3 vs the suite's MIT license** — needs a deliberate
-  decision (accept GPL / isolate the engine / commercial license / MIT engine).
-  See `docs/architecture/formula-refs.md` §6 and the Section 17 log.
-- **`formula-compat.md` path** — reconcile §3.3 (`/apps/sheet/docs/...`) vs
-  §4/§14/§15 (`/docs/...`) to one canonical location.
+- ✅ **Formula engine licensing** — resolved by **removing HyperFormula (GPLv3)**
+  and adopting an **in-house MIT evaluator**; the suite stays MIT. (Sheet bundle
+  also dropped ~183KB→51KB gzip.) See `formula-refs.md` §6 and the §17 log.
+- ✅ **Compat-table path** — `/docs/formula-compat.md` is canonical; CLAUDE.md
+  §3.3 updated to match.
+- ↩︎ **GitHub remote / CI** — owner deferred for now (item §4.3).
 
 ## 6. Verdict
 
-**Phase 1 foundation: COMPLETE and verified at the web/model layer.** Full Phase
-1 sign-off is gated on the deferred native-runtime work in §4, which is the
-natural next body of work (install Rust/Tauri, wrap each app in a window, wire
-the launcher, and run CI on a remote). Recommend resolving the §5 decisions
-before or alongside that work.
+**Phase 1 foundation: COMPLETE and verified at the web/model layer**, with the
+two owner decisions resolved (§5) and Writer's Tauri integration scaffolded. Full
+Phase 1 sign-off is gated on the deferred native-runtime work in §4 — install
+Rust + MSVC Build Tools on a capable host, build the Writer window, replicate to
+Sheet/Slides, wire the launcher, and (when the owner is ready) run CI on a remote.

@@ -7,9 +7,10 @@ dist/
 build/
 *.tsbuildinfo
 
-# Rust / Tauri (added in Steps 3-5)
+# Rust / Tauri
 target/
-src-tauri/target/
+**/src-tauri/target/
+**/src-tauri/gen/
 
 # Test / coverage artifacts
 coverage/

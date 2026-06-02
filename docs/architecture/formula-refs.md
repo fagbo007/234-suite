@@ -44,7 +44,8 @@ it surfaces a lint warning. HyperFormula's A1 model is hidden behind this layer.
 | `a1.ts` | Pure conversions: `colToLabel`/`labelToCol` (0↔A, 26↔AA), `cellToA1`, `a1ToCell`, `isA1Reference`, `findA1References`. No state. |
 | `namedRefs.ts` | `NamedReferenceRegistry`: `name → {sheet,row,col}`. `register/resolve/rename/remove/getName`. **`onInsertRows`/`onInsertColumns` shift stored coordinates** so named refs stay stable across structural edits. |
 | `lint.ts` | `lintFormula(formula)` — flags raw A1 with the warning above. |
-| `engine.ts` | `SheetEngine` — thin HyperFormula wrapper for evaluation. |
+| `formula.ts` | In-house MIT evaluator (arithmetic + SUM/AVERAGE/COUNT, error codes). |
+| `engine.ts` | `SheetEngine` — stores raw cell contents; evaluates lazily via `formula.ts`. |
 
 ## 4. Structural stability
 
@@ -56,18 +57,20 @@ exactly why named refs are encouraged.
 
 ## 5. Phase status
 
-- **Phase 1 (this step):** scaffold — registry + A1 utilities + lint + a basic
-  HyperFormula wrapper (arithmetic, SUM/AVERAGE/COUNT). Tested in isolation.
+- **Phase 1 (this step):** scaffold — registry + A1 utilities + lint + the
+  in-house MIT evaluator (arithmetic, SUM/AVERAGE/COUNT). Tested in isolation.
 - **Phase 2:** fully wire the layer into the grid/formula-bar UX; autocomplete
   suggests names first in every dialog; column/row insert preserves all named
   refs end-to-end.
 
-## 6. ⚠️ HyperFormula licensing (open concern — needs owner review)
+## 6. ✅ Engine licensing (resolved 2026-06-02)
 
-HyperFormula is **GPLv3** (dual-licensed; commercial otherwise). The suite is
-**MIT** (root §1). Bundling GPLv3 code into an MIT-distributed application is a
-real license tension. Both the engine choice and MIT are *locked* decisions in
-CLAUDE.md, so Phase 1 proceeds using the open-source `licenseKey: 'gpl-v3'`.
-**This should be reviewed deliberately by the project owner** — options include
-accepting GPL for the suite, isolating the engine, negotiating a commercial
-HyperFormula license, or selecting an MIT-licensed formula engine.
+The earlier HyperFormula/GPLv3-vs-MIT tension is **resolved**: HyperFormula has
+been **removed** and replaced with an **in-house, dependency-free MIT evaluator**
+(`formula.ts` + `engine.ts`). The suite stays cleanly **MIT** (root §1) with no
+GPL dependency. The translation layer (this document) was engine-agnostic and
+unchanged. A1 remains the evaluation boundary inside `formula.ts`.
+
+Phase 2 breadth (more Excel functions) comes via extending the evaluator or
+adopting **formula.js** (MIT) — never a GPL engine. See CLAUDE.md §17
+(2026-06-02 entry).

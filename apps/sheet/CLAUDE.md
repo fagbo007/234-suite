@@ -12,26 +12,31 @@ Scope owner: **Sheet agent** (`/apps/sheet`). See root Section 13.
 ## 1. What 234 Sheet is
 
 A spreadsheet that replaces Microsoft Excel, targeting general consumers. Built
-on **HyperFormula** for Excel-compatible formula evaluation. The guiding
-principles: references survive structural edits, data is never silently coerced,
-and formula help is available in every input context. These directly fix Excel's
-documented pain points (root Section 2.2).
+on an **in-house, MIT-licensed formula evaluator** (`/packages/formula-engine`).
+The guiding principles: references survive structural edits, data is never
+silently coerced, and formula help is available in every input context. These
+directly fix Excel's documented pain points (root Section 2.2).
+
+> The engine was HyperFormula until 2026-06-02; it was swapped for an in-house
+> MIT evaluator to keep the suite MIT (HyperFormula is GPLv3). See CLAUDE.md §17.
 
 ---
 
-## 2. HyperFormula integration specification
+## 2. Formula engine specification
 
-- HyperFormula is the formula evaluation engine (~90% Excel function coverage).
-- HyperFormula uses **A1 notation internally.** This A1 model is an
-  implementation detail that **must stay hidden behind the translation layer**
-  (see Section 3). The rest of the app and the storage layer never see raw A1.
+- The MIT evaluator (`formula.ts`) covers Phase 1: arithmetic + `SUM` /
+  `AVERAGE` / `COUNT`, with Excel-style error codes (`#DIV/0!`, `#NAME?`,
+  `#CYCLE!`, `#VALUE!`, `#ERROR!`).
+- It uses **A1 notation only at its evaluation boundary.** That A1 model
+  **must stay hidden behind the translation layer** (see Section 3). The rest of
+  the app and the storage layer never see raw A1.
 - Per the Tauri/Electron trade-off (root Section 3.5), CPU-intensive evaluation
   belongs in the Rust backend. Ask before adding a Node.js subprocess that
   could be handled in Rust.
 - **Do not implement missing functions by guessing.** Before adding any formula
-  feature, check the compat gap table (see Section 6). Functions HyperFormula
-  does not implement must be surfaced in the UI as unsupported with a clear
-  error message — never silently approximated.
+  feature, check the compat table (see Section 7). Unsupported functions return
+  `#NAME?` and must be surfaced in the UI clearly — never silently approximated.
+  Broader coverage in Phase 2 comes via extending the evaluator or formula.js (MIT).
 
 ### Phase 1 scope
 
@@ -110,18 +115,13 @@ Do not build it during Phase 1.)
 
 ---
 
-## 7. HyperFormula compat gaps — required reading before formula work
+## 7. Formula support table — required reading before formula work
 
-The HyperFormula gap table is built in Phase 1 and lives at
-**`/docs/formula-compat.md`** (root Section 4, Section 15 Step 4).
+The formula support table is the canonical **`/docs/formula-compat.md`** (root
+Section 3.3, Section 4, Section 15 Step 4).
 
-> Path note: root Section 3.3 references `/apps/sheet/docs/formula-compat.md`
-> while Section 4, Section 14, and Section 15 reference `/docs/formula-compat.md`.
-> This file follows the majority path `/docs/formula-compat.md`; confirm the
-> canonical location with the project owner and keep one source of truth.
-
-Before adding any formula feature, consult this table. Functions not implemented
-by HyperFormula are marked unsupported in the UI with a clear error message —
+Before adding any formula feature, consult this table. Functions the evaluator
+does not implement return `#NAME?` and are surfaced in the UI as unsupported —
 never implemented by guessing (root Section 3.3).
 
 External-reference / ghost-link auditing (surfacing external refs in the

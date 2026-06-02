@@ -86,10 +86,39 @@ all three platforms before any app logic is written.
 - Built with **pnpm workspaces** (via Node's built-in corepack), **TypeScript
   strict**, **Vitest** (unit), **Playwright** (E2E), and **GitHub Actions** CI
   across Windows / macOS / Linux.
-- **Rust/cargo and the Tauri CLI are not yet installed.** They are introduced
-  when the first Tauri window is built (Step 3). At that point this document
-  must be updated with the `src-tauri` layout, the per-app Tauri config, and the
-  launcher spawn mechanism.
+- **Tauri CLI (`@tauri-apps/cli` v2) is installed for Writer.** Rust/cargo are
+  still not installed, and — importantly — the **MSVC C++ Build Tools are absent**
+  on this machine (confirmed by `tauri info`: WebView2 ✔, MSVC ✘, rustc ✘).
+
+### 3a. Writer `src-tauri` scaffold (2026-06-02)
+
+234 Writer now has a wired Tauri v2 backend (`apps/writer/src-tauri/`):
+
+```
+src-tauri/
+  Cargo.toml            # tauri v2 + tauri-build; lib crate writer_lib
+  build.rs              # tauri_build::build()
+  tauri.conf.json       # devUrl http://localhost:5173, frontendDist ../dist,
+                        # beforeDevCommand/beforeBuildCommand → pnpm
+  src/main.rs           # calls writer_lib::run()
+  src/lib.rs            # tauri::Builder window host
+  capabilities/default.json   # core:default for the "main" window
+  icons/README.md       # run `tauri icon <source>` to generate (not committed)
+```
+
+`pnpm --filter @234/writer tauri info` detects the config (React + Vite). The
+**native compile/window is deferred** — see prerequisites below.
+
+### Prerequisites to actually build/run a Tauri window (per platform)
+
+- **All:** Rust toolchain via rustup (`rustc`, `cargo`); app icons
+  (`tauri icon <source.png>`).
+- **Windows:** **MSVC C++ Build Tools** (Visual Studio Build Tools — `cl.exe`,
+  Windows SDK; multi-GB, admin install) + WebView2 runtime (present here).
+- **macOS:** Xcode Command Line Tools. **Linux:** `webkit2gtk` + build essentials.
+
+Sheet and Slides get the same `src-tauri` treatment once Writer's window is
+verified on an MSVC/Rust-equipped machine; then the launcher spawn mechanism.
 
 ---
 
@@ -110,7 +139,8 @@ docs/architecture/app-shell.md # this file
 
 ## 5. Open follow-ups (track as the shell is built)
 
-- `src-tauri` per app + shared Tauri config conventions (Step 3).
+- `src-tauri` for **Sheet and Slides** (Writer is scaffolded — §3a); shared Tauri
+  config conventions. Native window build pending an MSVC/Rust-equipped host.
 - Launcher implementation and how it spawns/standalone-detects each app.
 - Pre-commit and post-edit hooks (Section 12) — not part of the Step 1 checklist;
   wire when the test/benchmark commands they depend on exist.

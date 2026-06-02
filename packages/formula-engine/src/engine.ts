@@ -1,4 +1,4 @@
-import { DetailedCellError, HyperFormula } from 'hyperformula';
+import { evaluateFormula } from './formula';
 
 export interface UsedRange {
   rows: number;
@@ -7,44 +7,83 @@ export interface UsedRange {
 
 export type CellValue = string | number | boolean | null;
 
+const ERROR_CODE = /^#.*[!?]$/;
+
 /**
- * Thin wrapper around HyperFormula for evaluation. HyperFormula uses A1
- * internally — that A1 model is the evaluation boundary and stays hidden behind
- * this wrapper and the translation layer (root CLAUDE.md Section 3.4).
+ * In-house, MIT-licensed spreadsheet engine. Stores raw cell contents and
+ * evaluates formulas lazily via `formula.ts`. Replaces HyperFormula (GPLv3) so
+ * the suite stays cleanly MIT (see docs/architecture/formula-refs.md §6).
  *
- * NOTE: HyperFormula is GPLv3. See docs/architecture/formula-refs.md Section 6.
+ * A1 references inside formulas are the evaluation boundary and stay hidden
+ * behind this engine + the translation layer (root CLAUDE.md §3.4). Phase 1
+ * scope: arithmetic + SUM/AVERAGE/COUNT.
  */
 export class SheetEngine {
-  private readonly hf: HyperFormula;
-  private readonly sheetId: number;
+  private readonly cells = new Map<string, string>();
 
-  constructor() {
-    this.hf = HyperFormula.buildEmpty({ licenseKey: 'gpl-v3' });
-    const name = this.hf.addSheet('Sheet1');
-    this.sheetId = this.hf.getSheetId(name) ?? 0;
+  private key(row: number, col: number): string {
+    return `${row},${col}`;
   }
 
   setCell(row: number, col: number, raw: string): void {
-    this.hf.setCellContents({ sheet: this.sheetId, row, col }, raw === '' ? null : raw);
-  }
-
-  getValue(row: number, col: number): CellValue {
-    const value = this.hf.getCellValue({ sheet: this.sheetId, row, col });
-    if (value instanceof DetailedCellError) return value.value;
-    return value;
+    const key = this.key(row, col);
+    if (raw === '') this.cells.delete(key);
+    else this.cells.set(key, raw);
   }
 
   getRaw(row: number, col: number): string {
-    const raw = this.hf.getCellSerialized({ sheet: this.sheetId, row, col });
-    return raw === null || raw === undefined ? '' : String(raw);
+    return this.cells.get(this.key(row, col)) ?? '';
+  }
+
+  getValue(row: number, col: number): CellValue {
+    return this.compute(row, col, new Set());
   }
 
   usedRange(): UsedRange {
-    const dimensions = this.hf.getSheetDimensions(this.sheetId);
-    return { rows: dimensions.height, cols: dimensions.width };
+    let rows = 0;
+    let cols = 0;
+    for (const key of this.cells.keys()) {
+      const [r, c] = key.split(',').map(Number) as [number, number];
+      rows = Math.max(rows, r + 1);
+      cols = Math.max(cols, c + 1);
+    }
+    return { rows, cols };
   }
 
+  /** Clears all cells. (No external resource to release — kept for API parity.) */
   destroy(): void {
-    this.hf.destroy();
+    this.cells.clear();
+  }
+
+  private compute(row: number, col: number, visiting: Set<string>): CellValue {
+    const raw = this.getRaw(row, col);
+    if (raw === '') return null;
+    if (!raw.startsWith('=')) {
+      const n = Number(raw);
+      return raw.trim() !== '' && Number.isFinite(n) ? n : raw;
+    }
+
+    const key = this.key(row, col);
+    if (visiting.has(key)) return '#CYCLE!';
+    visiting.add(key);
+    try {
+      return evaluateFormula(raw.slice(1), (r, c) => this.computeNumeric(r, c, visiting));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      return ERROR_CODE.test(message) ? message : '#ERROR!';
+    } finally {
+      visiting.delete(key);
+    }
+  }
+
+  private computeNumeric(row: number, col: number, visiting: Set<string>): number | null {
+    const value = this.compute(row, col, visiting);
+    if (value === null) return null;
+    if (typeof value === 'number') return value;
+    if (typeof value === 'boolean') return value ? 1 : 0;
+    if (ERROR_CODE.test(value)) throw new Error(value); // propagate the error code
+    const n = Number(value);
+    if (value.trim() !== '' && Number.isFinite(n)) return n;
+    throw new Error('#VALUE!');
   }
 }

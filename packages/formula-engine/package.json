@@ -15,9 +15,6 @@
     "test": "vitest run",
     "typecheck": "tsc -b"
   },
-  "dependencies": {
-    "hyperformula": "^2.7.0"
-  },
   "devDependencies": {
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"

@@ -83,7 +83,7 @@ simplify these constraints without understanding what pain they are fixing.
 | Desktop shell | Tauri 2 + Rust | Native binaries, cross-platform, much lighter than Electron. Critical for spreadsheet performance |
 | UI layer | React 18 + TypeScript | Component-driven, typed, testable. Claude Code handles Rust fluently so team Rust fluency is not a constraint |
 | Document model (Writer) | ProseMirror | Structured schema, styles as first-class schema nodes, extensible |
-| Formula engine (Sheet) | HyperFormula | Open source, Excel-compatible formula evaluation, ~90% Excel function coverage |
+| Formula engine (Sheet) | In-house MIT evaluator (formula.js — MIT — for Phase 2 breadth) | MIT-licensed so the suite stays MIT; HyperFormula (GPLv3) was dropped. Phase 1 covers arithmetic + SUM/AVERAGE/COUNT. Owner decision 2026-06-02 — see §17 |
 | Canvas model (Slides) | Fabric.js | Precise object model, pixel-perfect layout, good SVG interop |
 | Collaboration / state | Yjs (CRDTs) | Conflict-free, offline-first. Optional — not required for v1. Remote sessions use optional relay server |
 | File formats (native) | Markdown (.fwtr), CSV (.fwsh), JSON (.fwsl) | Open, human-readable, version-control-friendly |
@@ -108,19 +108,23 @@ Installer packages:
 
 Record implementation decisions in `/docs/architecture/app-shell.md`.
 
-### 3.3 HyperFormula known gaps
+### 3.3 Formula function coverage
 
-HyperFormula does not implement every Excel function. Before adding any formula
-feature in 234 Sheet, check the compat table at
-`/apps/sheet/docs/formula-compat.md`. Do not implement missing functions by
-guessing — mark them as unsupported in the UI with a clear error message. Build
-the compat table in Phase 1 before any formula work begins.
+The in-house MIT evaluator covers a deliberately small Phase 1 set (arithmetic +
+SUM/AVERAGE/COUNT). Before adding any formula feature in 234 Sheet, check the
+compat table at `/docs/formula-compat.md`. Do not implement missing functions by
+guessing — mark them as unsupported in the UI with a clear error message (the
+evaluator returns `#NAME?` for unknown functions). Broader coverage in Phase 2
+comes via extending the evaluator or adopting formula.js (MIT). The compat table
+is maintained from Phase 1 onward.
 
 ### 3.4 Formula reference translation layer
 
-HyperFormula uses A1 notation internally. 234 Sheet exposes named references
-to users by default. A translation layer in `/packages/formula-engine` maps
-human-readable names to HyperFormula coordinates at evaluation time.
+The formula engine uses A1 notation at its evaluation boundary. 234 Sheet
+exposes named references to users by default. A translation layer in
+`/packages/formula-engine` maps human-readable names to cell coordinates at
+evaluation time. (The translation layer is engine-agnostic — it was unaffected
+by swapping HyperFormula out for the in-house MIT evaluator.)
 
 Rules:
 - Named references are the **default and encouraged** path. Autocomplete always
@@ -796,6 +800,35 @@ Format: `YYYY-MM-DD | Decision | Rationale | Alternatives considered`
              Avoids two competing locations; most CLAUDE.md references agree on
              /docs/formula-compat.md. |
              Alternatives: the /apps/sheet/docs path (deferred to owner).
+
+2026-06-02 | RESOLVES the 2026-06-01 GPL/MIT concern: HyperFormula (GPLv3) is
+             removed and replaced by an in-house, dependency-free MIT evaluator
+             in /packages/formula-engine (formula.ts + engine.ts). Phase 1 scope:
+             arithmetic + SUM/AVERAGE/COUNT, with #DIV/0!/#NAME?/#CYCLE!/#VALUE!
+             error codes. The public SheetEngine API is unchanged, so apps/sheet
+             needed no changes; the translation layer is engine-agnostic. Sheet
+             bundle dropped ~183KB→51KB gzip. |
+             Keeps the suite cleanly MIT (Section 1) without a GPL dependency,
+             while preserving the Phase 1 feature set. |
+             Alternatives considered (and the owner's choice): isolate the engine,
+             accept GPL, commercial license — all rejected in favour of an MIT
+             engine. Phase 2 breadth via extending the evaluator or formula.js (MIT).
+
+2026-06-02 | RESOLVES the compat-path item: /docs/formula-compat.md is canonical;
+             Section 3.3 was updated to reference it (no longer
+             /apps/sheet/docs/formula-compat.md). |
+             Single source of truth for the compat table. |
+             Alternatives: the /apps/sheet/docs path (rejected).
+
+2026-06-02 | Tauri proof for 234 Writer: src-tauri scaffolded (Cargo.toml,
+             tauri.conf.json v2 wired to Vite, main.rs/lib.rs, capabilities) and
+             @tauri-apps/cli added; `tauri info` confirms the config is detected.
+             The native compile/window is DEFERRED — this machine lacks the MSVC
+             C++ Build Tools and Rust (confirmed by `tauri info`), and MSVC is a
+             multi-GB admin install. |
+             Delivers the runnable Tauri integration without a futile build on an
+             un-tooled host; the window builds on an MSVC+Rust-equipped machine. |
+             Alternatives: install rustup now (rejected — can't link without MSVC).
 ```
 
 ---
