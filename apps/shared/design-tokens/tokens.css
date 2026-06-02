@@ -1,0 +1,65 @@
+/*
+ * Project 234 design tokens.
+ *
+ * This is the single source of raw values. Component styles must reference these
+ * custom properties only — never a hardcoded hex (root CLAUDE.md Section 5, Section 12).
+ *
+ * Light values live in :root; dark overrides live under [data-theme='dark'].
+ * Scale / weight / spacing / radius are theme-independent. Dark mode is applied
+ * by default by the app shells (Section 5: "dark mode by default").
+ */
+
+:root {
+  /* Colour — semantic roles (light) */
+  --color-bg-base: #ffffff;
+  --color-bg-surface: #f6f7f8;
+  --color-bg-elevated: #ffffff;
+  --color-fg-primary: #1a1b1e;
+  --color-fg-secondary: #5c5f66;
+  --color-fg-muted: #8a8d94;
+  --color-accent: #3b6ef0;
+  --color-accent-hover: #2f59c4;
+  --color-fg-on-accent: #ffffff;
+  --color-border: #e3e4e8;
+  --color-focus-ring: #3b6ef0;
+  --color-danger: #d23f3f;
+
+  /* Typography */
+  --font-family-base:
+    system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-size-body: 14px;
+  --font-size-emphasis: 16px;
+  --font-size-meta: 12px;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --line-height-base: 1.5;
+
+  /* Spacing — base-4 scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
+
+  /* Radius */
+  --radius-interactive: 8px;
+  --radius-card: 12px;
+}
+
+:root[data-theme='dark'] {
+  --color-bg-base: #121317;
+  --color-bg-surface: #1a1c22;
+  --color-bg-elevated: #22252d;
+  --color-fg-primary: #f2f3f5;
+  --color-fg-secondary: #b3b6bf;
+  --color-fg-muted: #7d818c;
+  --color-accent: #6f9cff;
+  --color-accent-hover: #88acff;
+  --color-fg-on-accent: #12131a;
+  --color-border: #2c2f38;
+  --color-focus-ring: #6f9cff;
+  --color-danger: #ff6b6b;
+}

@@ -1,0 +1,72 @@
+.scroll {
+  overflow: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-bg-base);
+  font-size: var(--font-size-body);
+  color: var(--color-fg-primary);
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  background: var(--color-bg-surface);
+}
+
+.corner {
+  flex: none;
+  border-right: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.colHead {
+  flex: none;
+  box-sizing: border-box;
+  padding: var(--space-1) var(--space-2);
+  text-align: center;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-fg-secondary);
+  border-right: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.body {
+  position: relative;
+}
+
+.row {
+  position: absolute;
+  left: 0;
+  display: flex;
+}
+
+.gutter {
+  flex: none;
+  box-sizing: border-box;
+  padding: var(--space-1) var(--space-2);
+  text-align: right;
+  font-size: var(--font-size-meta);
+  color: var(--color-fg-muted);
+  background: var(--color-bg-surface);
+  border-right: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.cell {
+  flex: none;
+  box-sizing: border-box;
+  padding: var(--space-1) var(--space-2);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  cursor: cell;
+  border-right: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.active {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: -2px;
+}

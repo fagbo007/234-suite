@@ -1,0 +1,36 @@
+{
+  "name": "project-234",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Project 234 — open source office suite (Writer, Sheet, Slides)",
+  "license": "MIT",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "pnpm -r test",
+    "test:writer": "pnpm --filter @234/writer test",
+    "test:sheet": "pnpm --filter @234/sheet test",
+    "test:slides": "pnpm --filter @234/slides test",
+    "test:shared": "pnpm --filter @234/shared test",
+    "bench:writer": "pnpm --filter @234/writer bench",
+    "bench:sheet": "pnpm --filter @234/sheet bench",
+    "bench:slides": "pnpm --filter @234/slides bench",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "typecheck": "tsc -b",
+    "e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "@playwright/test": "^1.49.1",
+    "eslint": "^9.17.0",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "globals": "^15.14.0",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.2"
+  }
+}
