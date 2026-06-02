@@ -83,4 +83,14 @@ describe('SheetEngine', () => {
     expect(engine.getValue(1, 2)).toBe(0); // =A3 now points at the empty inserted row
     expect(engine.coordOf('tot')).toEqual({ row: 3, col: 0 });
   });
+
+  it('audits external links per cell', () => {
+    engine = new SheetEngine();
+    engine.setCell(0, 0, '=SUM(A2:A3)'); // internal — not flagged
+    engine.setCell(0, 1, '=[Book.xlsx]Sheet1!A1');
+    const links = engine.auditExternalLinks();
+    expect(links).toHaveLength(1);
+    expect(links[0]).toMatchObject({ row: 0, col: 1 });
+    expect(links[0]?.refs).toContain('[Book.xlsx]Sheet1!A1');
+  });
 });

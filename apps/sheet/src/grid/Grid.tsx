@@ -1,5 +1,7 @@
 import { colToLabel, type SheetEngine } from '@234/formula-engine';
 import { useMemo, useState } from 'react';
+import { displayDate, type DateFormat } from '../dates';
+import { type ColumnType } from '../fwsh';
 import { DEFAULT_DIMENSIONS, getVisibleRange, materializeRows, totalHeight } from './model';
 import styles from './Grid.module.css';
 
@@ -8,16 +10,28 @@ const GUTTER_WIDTH = 56;
 const dims = DEFAULT_DIMENSIONS;
 const contentWidth = GUTTER_WIDTH + dims.cols * dims.colWidth;
 
+export type ColumnTypeMap = Record<number, { type: ColumnType; dateFormat?: DateFormat }>;
+
 export interface GridProps {
   engine: SheetEngine;
   active: { row: number; col: number };
   onSelect: (row: number, col: number) => void;
   /** Bumping this re-reads cell values after edits/recalculation. */
   revision: number;
+  columnTypes?: ColumnTypeMap;
 }
 
-export function Grid({ engine, active, onSelect, revision }: GridProps) {
+export function Grid({ engine, active, onSelect, revision, columnTypes = {} }: GridProps) {
   const [scrollTop, setScrollTop] = useState(0);
+
+  // Date columns display in their locked format; the stored raw is never mutated.
+  const displayValue = (col: number, value: string): string => {
+    const schema = columnTypes[col];
+    if (schema?.type === 'date' && schema.dateFormat) {
+      return displayDate(value, schema.dateFormat as DateFormat);
+    }
+    return value;
+  };
 
   // Computed inline each render (cheap — see grid.perf.test.ts). A change to the
   // `revision` prop re-renders the grid, re-reading values after edits/recalc.
@@ -77,7 +91,7 @@ export function Grid({ engine, active, onSelect, revision }: GridProps) {
                   style={{ width: dims.colWidth }}
                   onMouseDown={() => onSelect(vm.row, cell.col)}
                 >
-                  {cell.value}
+                  {displayValue(cell.col, cell.value)}
                 </div>
               );
             })}

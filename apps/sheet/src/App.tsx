@@ -8,9 +8,13 @@ import {
 } from '@234/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import styles from './App.module.css';
+import { ColumnInspector, type ColumnSchemaValue } from './grid/ColumnInspector';
 import { FormulaBar } from './grid/FormulaBar';
-import { Grid } from './grid/Grid';
+import { Grid, type ColumnTypeMap } from './grid/Grid';
 import { NameBox } from './grid/NameBox';
+import { LinkAuditor } from './inspector/LinkAuditor';
+
+type Panel = 'none' | 'column' | 'links';
 
 export default function App() {
   const palette = useCommandPalette();
@@ -25,10 +29,16 @@ export default function App() {
   });
   const [active, setActive] = useState({ row: 0, col: 0 });
   const [revision, setRevision] = useState(0);
+  const [columnTypes, setColumnTypes] = useState<ColumnTypeMap>({});
+  const [panel, setPanel] = useState<Panel>('none');
   const bump = useCallback(() => setRevision((value) => value + 1), []);
 
   const activeRef = useRef(active);
   activeRef.current = active;
+
+  const setColumnType = (col: number, schema: ColumnSchemaValue) => {
+    setColumnTypes((prev) => ({ ...prev, [col]: schema }));
+  };
 
   useEffect(() => {
     const unregister = [
@@ -51,6 +61,18 @@ export default function App() {
         },
       }),
       registerCommand({ id: 'sheet.recalculate', title: 'Recalculate', group: 'Data', run: bump }),
+      registerCommand({
+        id: 'sheet.set-column-type',
+        title: 'Set column type',
+        group: 'Data',
+        run: () => setPanel('column'),
+      }),
+      registerCommand({
+        id: 'sheet.audit-links',
+        title: 'Audit external links',
+        group: 'Data',
+        run: () => setPanel('links'),
+      }),
       registerCommand({
         id: 'sheet.toggle-theme',
         title: 'Toggle theme',
@@ -81,11 +103,16 @@ export default function App() {
         <NameBox engine={engine} active={active} onCommit={bump} />
         <FormulaBar engine={engine} active={active} onCommit={bump} />
       </div>
+      {panel === 'column' ? (
+        <ColumnInspector col={active.col} schema={columnTypes[active.col]} onChange={setColumnType} />
+      ) : null}
+      {panel === 'links' ? <LinkAuditor engine={engine} revision={revision} /> : null}
       <Grid
         engine={engine}
         active={active}
         onSelect={(row, col) => setActive({ row, col })}
         revision={revision}
+        columnTypes={columnTypes}
       />
       <CommandPalette isOpen={palette.isOpen} onClose={palette.close} context={{ app: 'sheet' }} />
     </div>

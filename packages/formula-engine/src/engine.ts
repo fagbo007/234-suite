@@ -1,10 +1,17 @@
 import { a1ToCell } from './a1';
 import { evaluateFormula } from './formula';
+import { findExternalReferences } from './links';
 import { NamedReferenceRegistry } from './namedRefs';
 
 export interface UsedRange {
   rows: number;
   cols: number;
+}
+
+export interface ExternalLink {
+  row: number;
+  col: number;
+  refs: string[];
 }
 
 export interface NamedCell {
@@ -91,6 +98,20 @@ export class SheetEngine {
       if (coord) out[name] = { row: coord.row, col: coord.col };
     }
     return out;
+  }
+
+  /** Surface external references (URLs / workbook / cross-sheet) per cell (§2.2). */
+  auditExternalLinks(): ExternalLink[] {
+    const links: ExternalLink[] = [];
+    for (const [key, raw] of this.cells) {
+      if (!raw.startsWith('=')) continue;
+      const refs = findExternalReferences(raw);
+      if (refs.length === 0) continue;
+      const [row, col] = key.split(',').map(Number) as [number, number];
+      links.push({ row, col, refs });
+    }
+    links.sort((a, b) => a.row - b.row || a.col - b.col);
+    return links;
   }
 
   // --- Structural edits (preserve named-reference integrity) ---

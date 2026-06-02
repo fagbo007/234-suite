@@ -1,4 +1,4 @@
-// @234/formula-engine — HyperFormula wrapper + named-reference translation layer.
+// @234/formula-engine — in-house MIT evaluator + named-reference translation layer.
 // See docs/architecture/formula-refs.md.
 
 export {
@@ -12,4 +12,11 @@ export {
 } from './a1';
 export { NamedReferenceRegistry } from './namedRefs';
 export { lintFormula, A1_WARNING, type LintWarning } from './lint';
-export { SheetEngine, type UsedRange, type CellValue } from './engine';
+export { findExternalReferences } from './links';
+export {
+  SheetEngine,
+  type UsedRange,
+  type CellValue,
+  type NamedCell,
+  type ExternalLink,
+} from './engine';

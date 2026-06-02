@@ -13,6 +13,8 @@ export type ColumnType = 'text' | 'number' | 'date';
 export interface ColumnSchema {
   index: number;
   type: ColumnType;
+  /** Locked display format for a `date` column (root CLAUDE.md §2.2). */
+  dateFormat?: string;
 }
 
 export interface FwshMeta {
