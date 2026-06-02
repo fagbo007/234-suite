@@ -70,3 +70,13 @@
   outline: 2px solid var(--color-focus-ring);
   outline-offset: -2px;
 }
+
+/* Conditional formatting highlight (accent tint) and data-validation flag. */
+.highlight {
+  background: color-mix(in srgb, var(--color-accent) 22%, transparent);
+}
+
+.invalid {
+  outline: 2px solid var(--color-danger);
+  outline-offset: -2px;
+}

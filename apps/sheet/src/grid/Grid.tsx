@@ -2,6 +2,7 @@ import { colToLabel, type SheetEngine } from '@234/formula-engine';
 import { useMemo, useState } from 'react';
 import { displayDate, type DateFormat } from '../dates';
 import { type ColumnType } from '../fwsh';
+import { compare, type ComparisonOp } from '../rules';
 import { DEFAULT_DIMENSIONS, getVisibleRange, materializeRows, totalHeight } from './model';
 import styles from './Grid.module.css';
 
@@ -11,6 +12,10 @@ const dims = DEFAULT_DIMENSIONS;
 const contentWidth = GUTTER_WIDTH + dims.cols * dims.colWidth;
 
 export type ColumnTypeMap = Record<number, { type: ColumnType; dateFormat?: DateFormat }>;
+export interface NumericRule {
+  op: ComparisonOp;
+  threshold: number;
+}
 
 export interface GridProps {
   engine: SheetEngine;
@@ -19,9 +24,19 @@ export interface GridProps {
   /** Bumping this re-reads cell values after edits/recalculation. */
   revision: number;
   columnTypes?: ColumnTypeMap;
+  conditionalRule?: NumericRule | null;
+  validationRule?: NumericRule | null;
 }
 
-export function Grid({ engine, active, onSelect, revision, columnTypes = {} }: GridProps) {
+export function Grid({
+  engine,
+  active,
+  onSelect,
+  revision,
+  columnTypes = {},
+  conditionalRule = null,
+  validationRule = null,
+}: GridProps) {
   const [scrollTop, setScrollTop] = useState(0);
 
   // Date columns display in their locked format; the stored raw is never mutated.
@@ -31,6 +46,20 @@ export function Grid({ engine, active, onSelect, revision, columnTypes = {} }: G
       return displayDate(value, schema.dateFormat as DateFormat);
     }
     return value;
+  };
+
+  // Conditional formatting + data validation classes for a numeric cell.
+  const ruleClasses = (value: string): string[] => {
+    const num = Number(value);
+    if (value.trim() === '' || !Number.isFinite(num)) return [];
+    const classes: string[] = [];
+    if (conditionalRule && compare(num, conditionalRule.op, conditionalRule.threshold)) {
+      classes.push(styles.highlight!);
+    }
+    if (validationRule && !compare(num, validationRule.op, validationRule.threshold)) {
+      classes.push(styles.invalid!);
+    }
+    return classes;
   };
 
   // Computed inline each render (cheap — see grid.perf.test.ts). A change to the
@@ -81,13 +110,16 @@ export function Grid({ engine, active, onSelect, revision, columnTypes = {} }: G
             </div>
             {vm.cells.map((cell) => {
               const isActive = active.row === vm.row && active.col === cell.col;
+              const classes = [styles.cell, isActive ? styles.active : '', ...ruleClasses(cell.value)]
+                .filter(Boolean)
+                .join(' ');
               return (
                 <div
                   key={cell.col}
                   role="gridcell"
                   aria-label={`${columns[cell.col] ?? ''}${vm.row + 1}`}
                   aria-selected={isActive}
-                  className={isActive ? `${styles.cell} ${styles.active}` : styles.cell}
+                  className={classes}
                   style={{ width: dims.colWidth }}
                   onMouseDown={() => onSelect(vm.row, cell.col)}
                 >

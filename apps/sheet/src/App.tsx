@@ -13,11 +13,12 @@ import { ChartDialog } from './charts/ChartDialog';
 import { ChartView } from './charts/ChartView';
 import { ColumnInspector, type ColumnSchemaValue } from './grid/ColumnInspector';
 import { FormulaBar } from './grid/FormulaBar';
-import { Grid, type ColumnTypeMap } from './grid/Grid';
+import { Grid, type ColumnTypeMap, type NumericRule } from './grid/Grid';
 import { NameBox } from './grid/NameBox';
 import { LinkAuditor } from './inspector/LinkAuditor';
+import { RuleDialog, type RuleDraft } from './inspector/RuleDialog';
 
-type Panel = 'none' | 'column' | 'links' | 'chart';
+type Panel = 'none' | 'column' | 'links' | 'chart' | 'conditional' | 'validation';
 
 export default function App() {
   const palette = useCommandPalette();
@@ -35,6 +36,8 @@ export default function App() {
   const [columnTypes, setColumnTypes] = useState<ColumnTypeMap>({});
   const [panel, setPanel] = useState<Panel>('none');
   const [chart, setChart] = useState<Chart | null>(null);
+  const [conditionalRule, setConditionalRule] = useState<NumericRule | null>(null);
+  const [validationRule, setValidationRule] = useState<NumericRule | null>(null);
   const bump = useCallback(() => setRevision((value) => value + 1), []);
 
   const activeRef = useRef(active);
@@ -42,6 +45,24 @@ export default function App() {
 
   const setColumnType = (col: number, schema: ColumnSchemaValue) => {
     setColumnTypes((prev) => ({ ...prev, [col]: schema }));
+  };
+
+  // Resolve a rule threshold: a number, or a single named/A1 ref via the engine.
+  const resolveThreshold = (expr: string): number | null => {
+    const direct = Number(expr);
+    if (expr.trim() !== '' && Number.isFinite(direct)) return direct;
+    try {
+      const value = engine.readRange(expr)[0];
+      return typeof value === 'number' ? value : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const applyRule = (draft: RuleDraft, set: (rule: NumericRule | null) => void) => {
+    const threshold = resolveThreshold(draft.threshold);
+    set(threshold === null ? null : { op: draft.op, threshold });
+    setPanel('none');
   };
 
   useEffect(() => {
@@ -82,6 +103,18 @@ export default function App() {
         title: 'Insert chart',
         group: 'Insert',
         run: () => setPanel('chart'),
+      }),
+      registerCommand({
+        id: 'sheet.conditional-format',
+        title: 'Conditional formatting',
+        group: 'Format',
+        run: () => setPanel('conditional'),
+      }),
+      registerCommand({
+        id: 'sheet.data-validation',
+        title: 'Data validation',
+        group: 'Data',
+        run: () => setPanel('validation'),
       }),
       registerCommand({
         id: 'sheet.toggle-theme',
@@ -127,6 +160,22 @@ export default function App() {
           onClose={() => setPanel('none')}
         />
       ) : null}
+      {panel === 'conditional' ? (
+        <RuleDialog
+          engine={engine}
+          title="Conditional formatting"
+          onApply={(draft) => applyRule(draft, setConditionalRule)}
+          onClose={() => setPanel('none')}
+        />
+      ) : null}
+      {panel === 'validation' ? (
+        <RuleDialog
+          engine={engine}
+          title="Data validation"
+          onApply={(draft) => applyRule(draft, setValidationRule)}
+          onClose={() => setPanel('none')}
+        />
+      ) : null}
       {chart ? (
         <ChartView type={chart.type} values={chartValues(engine, chart.range)} title={chart.title} />
       ) : null}
@@ -136,6 +185,8 @@ export default function App() {
         onSelect={(row, col) => setActive({ row, col })}
         revision={revision}
         columnTypes={columnTypes}
+        conditionalRule={conditionalRule}
+        validationRule={validationRule}
       />
       <CommandPalette isOpen={palette.isOpen} onClose={palette.close} context={{ app: 'sheet' }} />
     </div>
