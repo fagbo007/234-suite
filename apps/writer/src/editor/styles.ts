@@ -56,6 +56,34 @@ export function styleToInlineCss(style: Style): string {
     .join('; ');
 }
 
+// --- Registry helpers (Phase 2 visual style editor) — all immutable ---
+
+export function createStyle(name: string): Style {
+  return { id: crypto.randomUUID(), name, properties: { fontSize: '14px', fontWeight: 400 } };
+}
+
+export function addStyle(registry: StyleRegistry, style: Style): StyleRegistry {
+  return [...registry, style];
+}
+
+export function renameStyle(registry: StyleRegistry, id: string, name: string): StyleRegistry {
+  return registry.map((style) => (style.id === id ? { ...style, name } : style));
+}
+
+export function updateStyle(
+  registry: StyleRegistry,
+  id: string,
+  patch: Partial<StyleProperties>,
+): StyleRegistry {
+  return registry.map((style) =>
+    style.id === id ? { ...style, properties: { ...style.properties, ...patch } } : style,
+  );
+}
+
+export function removeStyle(registry: StyleRegistry, id: string): StyleRegistry {
+  return registry.filter((style) => style.id !== id);
+}
+
 // The active registry is consulted by the schema's `toDOM` to resolve `styleId`
 // to inline CSS. Loading a `.fwtr` document sets this to that document's styles.
 let activeRegistry: StyleRegistry = defaultStyleRegistry;

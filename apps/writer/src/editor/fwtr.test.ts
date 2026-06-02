@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseFwtr, serializeFwtr } from './fwtr';
+import { headingNode, schema } from './schema';
 
 const SAMPLE = `---
 title: My letter
@@ -35,5 +36,18 @@ describe('.fwtr round-trip', () => {
     expect(second.doc.eq(first.doc)).toBe(true);
     expect(second.title).toBe(first.title);
     expect(second.styles).toEqual(first.styles);
+  });
+
+  it('persists per-block styleId via front-matter blockStyles', () => {
+    const doc = schema.node('doc', null, [
+      headingNode.create({ level: 1, styleId: 'title' }, schema.text('Styled')),
+      schema.node('paragraph', null, [schema.text('plain')]),
+    ]);
+    const text = serializeFwtr({ title: 'T', styles: [], doc });
+    expect(text).toContain('blockStyles');
+
+    const parsed = parseFwtr(text);
+    expect(parsed.doc.firstChild?.attrs.styleId).toBe('title');
+    expect(parsed.doc.child(1).attrs.styleId ?? null).toBeNull();
   });
 });

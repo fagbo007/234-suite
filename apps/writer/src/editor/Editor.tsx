@@ -14,18 +14,25 @@ styles: []
 
 # Welcome to 234 Writer
 
-Start typing. Press Ctrl+K (Cmd+K on macOS) to open the command palette for
-formatting commands such as bold, italic, headings, and lists.
+Start typing. Press Ctrl+K (Cmd+K on macOS) for the command palette, or Ctrl+F to
+find and replace. Use the Styles panel to create and apply named styles.
 `;
+
+export interface EditorProps {
+  /** Called once with the live view so panels (styles, find/replace) can dispatch. */
+  onReady?: (view: EditorView) => void;
+}
 
 /**
  * Mounts a ProseMirror editor and registers Writer's formatting commands into
  * the shared command palette. Editing is driven by the palette + intrinsic
  * shortcuts — there is no ribbon (root CLAUDE.md Section 5).
  */
-export function Editor() {
+export function Editor({ onReady }: EditorProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
+  const onReadyRef = useRef(onReady);
+  onReadyRef.current = onReady;
 
   useEffect(() => {
     const host = hostRef.current;
@@ -34,8 +41,6 @@ export function Editor() {
     const { doc } = parseFwtr(INITIAL_DOCUMENT);
     const view = new EditorView(host, {
       state: EditorState.create({ doc, plugins: buildPlugins() }),
-      // The editable region is interactive with no visible label — give it an
-      // accessible name and textbox semantics (root CLAUDE.md Section 12).
       attributes: {
         role: 'textbox',
         'aria-multiline': 'true',
@@ -43,6 +48,7 @@ export function Editor() {
       },
     });
     viewRef.current = view;
+    onReadyRef.current?.(view);
 
     const unregister = writerCommands(() => viewRef.current).map(registerCommand);
 

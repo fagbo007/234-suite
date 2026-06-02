@@ -3,7 +3,7 @@ import { keymap } from 'prosemirror-keymap';
 import { EditorState, TextSelection } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
 import { afterEach, describe, expect, it } from 'vitest';
-import { writerCommands } from './commands';
+import { applyStyleToSelection, writerCommands } from './commands';
 import { schema, strongMark } from './schema';
 
 let view: EditorView | null = null;
@@ -51,5 +51,17 @@ describe('writerCommands', () => {
   it('marks commands unavailable when there is no view', () => {
     const bold = writerCommands(() => null).find((command) => command.id === 'writer.bold');
     expect(bold?.isAvailable?.({})).toBe(false);
+  });
+
+  it('exposes undo/redo palette commands', () => {
+    const ids = writerCommands(() => null).map((command) => command.id);
+    expect(ids).toContain('writer.undo');
+    expect(ids).toContain('writer.redo');
+  });
+
+  it('applyStyleToSelection sets styleId on the selected block', () => {
+    view = mountHello();
+    applyStyleToSelection(view, 'title');
+    expect(view.state.doc.firstChild?.attrs.styleId).toBe('title');
   });
 });

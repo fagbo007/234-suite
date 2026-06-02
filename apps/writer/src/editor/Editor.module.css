@@ -25,3 +25,14 @@
 .editor :global(.ProseMirror p) {
   margin: 0 0 var(--space-3);
 }
+
+/* Find & replace highlight — transient editor chrome (decorations), not
+   document styling. */
+.editor :global(.search-match) {
+  background: color-mix(in srgb, var(--color-accent) 28%, transparent);
+}
+
+.editor :global(.search-active) {
+  background: var(--color-accent);
+  color: var(--color-fg-on-accent);
+}

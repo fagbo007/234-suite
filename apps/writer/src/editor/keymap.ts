@@ -4,6 +4,7 @@ import { keymap } from 'prosemirror-keymap';
 import { liftListItem, sinkListItem, splitListItem } from 'prosemirror-schema-list';
 import { type Plugin } from 'prosemirror-state';
 import { emMark, listItemNode, strongMark } from './schema';
+import { searchPlugin } from './search';
 
 /**
  * Core editing plugins: history + intrinsic shortcuts. Mod-b / Mod-i are basic
@@ -12,7 +13,9 @@ import { emMark, listItemNode, strongMark } from './schema';
  */
 export function buildPlugins(): Plugin[] {
   return [
-    history(),
+    // Unlimited undo within a session (root CLAUDE.md Section 9).
+    history({ depth: Infinity }),
+    searchPlugin,
     keymap({
       'Mod-b': toggleMark(strongMark),
       'Mod-i': toggleMark(emMark),
