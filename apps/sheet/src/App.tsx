@@ -8,13 +8,16 @@ import {
 } from '@234/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import styles from './App.module.css';
+import { type Chart, chartValues } from './charts/chart';
+import { ChartDialog } from './charts/ChartDialog';
+import { ChartView } from './charts/ChartView';
 import { ColumnInspector, type ColumnSchemaValue } from './grid/ColumnInspector';
 import { FormulaBar } from './grid/FormulaBar';
 import { Grid, type ColumnTypeMap } from './grid/Grid';
 import { NameBox } from './grid/NameBox';
 import { LinkAuditor } from './inspector/LinkAuditor';
 
-type Panel = 'none' | 'column' | 'links';
+type Panel = 'none' | 'column' | 'links' | 'chart';
 
 export default function App() {
   const palette = useCommandPalette();
@@ -31,6 +34,7 @@ export default function App() {
   const [revision, setRevision] = useState(0);
   const [columnTypes, setColumnTypes] = useState<ColumnTypeMap>({});
   const [panel, setPanel] = useState<Panel>('none');
+  const [chart, setChart] = useState<Chart | null>(null);
   const bump = useCallback(() => setRevision((value) => value + 1), []);
 
   const activeRef = useRef(active);
@@ -74,6 +78,12 @@ export default function App() {
         run: () => setPanel('links'),
       }),
       registerCommand({
+        id: 'sheet.insert-chart',
+        title: 'Insert chart',
+        group: 'Insert',
+        run: () => setPanel('chart'),
+      }),
+      registerCommand({
         id: 'sheet.toggle-theme',
         title: 'Toggle theme',
         group: 'View',
@@ -107,6 +117,19 @@ export default function App() {
         <ColumnInspector col={active.col} schema={columnTypes[active.col]} onChange={setColumnType} />
       ) : null}
       {panel === 'links' ? <LinkAuditor engine={engine} revision={revision} /> : null}
+      {panel === 'chart' ? (
+        <ChartDialog
+          engine={engine}
+          onApply={(next) => {
+            setChart(next);
+            setPanel('none');
+          }}
+          onClose={() => setPanel('none')}
+        />
+      ) : null}
+      {chart ? (
+        <ChartView type={chart.type} values={chartValues(engine, chart.range)} title={chart.title} />
+      ) : null}
       <Grid
         engine={engine}
         active={active}

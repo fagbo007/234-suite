@@ -93,4 +93,14 @@ describe('SheetEngine', () => {
     expect(links[0]).toMatchObject({ row: 0, col: 1 });
     expect(links[0]?.refs).toContain('[Book.xlsx]Sheet1!A1');
   });
+
+  it('reads a range and a single named reference', () => {
+    engine = new SheetEngine();
+    engine.setCell(0, 0, '10');
+    engine.setCell(1, 0, '20');
+    engine.setCell(2, 0, '30');
+    expect(engine.readRange('A1:A3')).toEqual([10, 20, 30]);
+    engine.defineName('top', 0, 0);
+    expect(engine.readRange('top')).toEqual([10]);
+  });
 });

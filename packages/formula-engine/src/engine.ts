@@ -114,6 +114,25 @@ export class SheetEngine {
     return links;
   }
 
+  /** Read a range (`A1:A5`) or a single named/A1 ref into a flat list of values. */
+  readRange(ref: string): CellValue[] {
+    const trimmed = ref.trim();
+    const colon = trimmed.indexOf(':');
+    if (colon === -1) {
+      const [row, col] = this.resolveRef(trimmed);
+      return [this.getValue(row, col)];
+    }
+    const [r0, c0] = this.resolveRef(trimmed.slice(0, colon).trim());
+    const [r1, c1] = this.resolveRef(trimmed.slice(colon + 1).trim());
+    const values: CellValue[] = [];
+    for (let r = Math.min(r0, r1); r <= Math.max(r0, r1); r++) {
+      for (let c = Math.min(c0, c1); c <= Math.max(c0, c1); c++) {
+        values.push(this.getValue(r, c));
+      }
+    }
+    return values;
+  }
+
   // --- Structural edits (preserve named-reference integrity) ---
 
   /** Insert a row at `at`: shift cell contents down and shift named refs. */
