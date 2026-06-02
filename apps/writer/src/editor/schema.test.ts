@@ -22,4 +22,18 @@ describe('Writer schema', () => {
     expect(dom.getAttribute('style')).toContain('font-size: 28px');
     expect(dom.getAttribute('class')).toBeNull();
   });
+
+  it('defines a block-level image node that renders inline (no class, not draggable)', () => {
+    const imageType = schema.nodes.image;
+    expect(imageType).toBeTruthy();
+    expect(imageType?.spec.group).toBe('block');
+    expect(imageType?.spec.draggable).toBe(false);
+
+    const node = imageType!.create({ src: 'data:image/png;base64,AAA', anchor: 'right' });
+    const dom = DOMSerializer.fromSchema(schema).serializeNode(node) as HTMLElement;
+    expect(dom.tagName.toLowerCase()).toBe('figure');
+    expect(dom.getAttribute('style')).toContain('justify-content: flex-end');
+    expect(dom.getAttribute('class')).toBeNull();
+    expect(dom.querySelector('img')?.getAttribute('src')).toBe('data:image/png;base64,AAA');
+  });
 });

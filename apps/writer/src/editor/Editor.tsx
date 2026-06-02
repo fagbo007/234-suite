@@ -21,6 +21,8 @@ find and replace. Use the Styles panel to create and apply named styles.
 export interface EditorProps {
   /** Called once with the live view so panels (styles, find/replace) can dispatch. */
   onReady?: (view: EditorView) => void;
+  /** Called after every state update — lets panels react to selection changes. */
+  onUpdate?: (view: EditorView) => void;
 }
 
 /**
@@ -28,23 +30,29 @@ export interface EditorProps {
  * the shared command palette. Editing is driven by the palette + intrinsic
  * shortcuts — there is no ribbon (root CLAUDE.md Section 5).
  */
-export function Editor({ onReady }: EditorProps) {
+export function Editor({ onReady, onUpdate }: EditorProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const onReadyRef = useRef(onReady);
+  const onUpdateRef = useRef(onUpdate);
   onReadyRef.current = onReady;
+  onUpdateRef.current = onUpdate;
 
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return;
 
     const { doc } = parseFwtr(INITIAL_DOCUMENT);
-    const view = new EditorView(host, {
+    const view: EditorView = new EditorView(host, {
       state: EditorState.create({ doc, plugins: buildPlugins() }),
       attributes: {
         role: 'textbox',
         'aria-multiline': 'true',
         'aria-label': 'Document content',
+      },
+      dispatchTransaction(transaction) {
+        view.updateState(view.state.apply(transaction));
+        onUpdateRef.current?.(view);
       },
     });
     viewRef.current = view;

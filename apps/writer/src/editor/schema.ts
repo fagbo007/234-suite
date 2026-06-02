@@ -20,6 +20,14 @@ function styledDOM(tag: string, node: PMNode): DOMOutputSpec {
   return [tag, 0];
 }
 
+export type ImageAnchor = 'left' | 'center' | 'right';
+
+/** Inline style for an image block's anchor — never a className (§16). */
+export function anchorToInlineCss(anchor: ImageAnchor): string {
+  const justify = anchor === 'left' ? 'flex-start' : anchor === 'right' ? 'flex-end' : 'center';
+  return `display: flex; justify-content: ${justify}; margin: var(--space-3) 0`;
+}
+
 const baseSchema = new Schema({
   nodes: {
     doc: { content: 'block+' },
@@ -39,6 +47,31 @@ const baseSchema = new Schema({
       toDOM: (node) => styledDOM(`h${node.attrs.level as number}`, node),
     },
     text: { group: 'inline' },
+    image: {
+      group: 'block',
+      atom: true,
+      draggable: false, // no float-on-drag (root §2.1, apps/writer/CLAUDE.md §3)
+      selectable: true,
+      attrs: { src: { default: '' }, alt: { default: '' }, anchor: { default: 'center' } },
+      parseDOM: [
+        {
+          tag: 'img[src]',
+          getAttrs: (dom) => ({
+            src: dom instanceof HTMLElement ? (dom.getAttribute('src') ?? '') : '',
+            alt: dom instanceof HTMLElement ? (dom.getAttribute('alt') ?? '') : '',
+            anchor: 'center',
+          }),
+        },
+      ],
+      toDOM: (node) => [
+        'figure',
+        {
+          'data-anchor': node.attrs.anchor as string,
+          style: anchorToInlineCss(node.attrs.anchor as ImageAnchor),
+        },
+        ['img', { src: node.attrs.src as string, alt: node.attrs.alt as string, style: 'max-width: 100%; height: auto' }],
+      ],
+    },
   },
   marks: {
     strong: {
@@ -75,5 +108,6 @@ export const headingNode = nodeType('heading');
 export const bulletListNode = nodeType('bullet_list');
 export const orderedListNode = nodeType('ordered_list');
 export const listItemNode = nodeType('list_item');
+export const imageNode = nodeType('image');
 export const strongMark = markType('strong');
 export const emMark = markType('em');

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseFwtr, serializeFwtr } from './fwtr';
-import { headingNode, schema } from './schema';
+import { headingNode, imageNode, schema } from './schema';
 
 const SAMPLE = `---
 title: My letter
@@ -49,5 +49,28 @@ describe('.fwtr round-trip', () => {
     const parsed = parseFwtr(text);
     expect(parsed.doc.firstChild?.attrs.styleId).toBe('title');
     expect(parsed.doc.child(1).attrs.styleId ?? null).toBeNull();
+  });
+
+  it('round-trips a block image via front matter (body stays prose)', () => {
+    const src = 'data:image/png;base64,AAAA';
+    const doc = schema.node('doc', null, [
+      schema.node('paragraph', null, [schema.text('Before')]),
+      imageNode.create({ src, alt: 'A picture', anchor: 'right' }),
+      schema.node('paragraph', null, [schema.text('After')]),
+    ]);
+
+    const text = serializeFwtr({ title: 'T', styles: [], doc });
+    expect(text).toContain('images:');
+    // The base64 lives in front matter, not the Markdown body.
+    const body = text.split('---\n').slice(2).join('---\n');
+    expect(body).not.toContain(src);
+
+    const parsed = parseFwtr(text);
+    expect(parsed.doc.childCount).toBe(3);
+    const image = parsed.doc.child(1);
+    expect(image.type.name).toBe('image');
+    expect(image.attrs.src).toBe(src);
+    expect(image.attrs.anchor).toBe('right');
+    expect(parsed.doc.child(2).textContent).toBe('After');
   });
 });

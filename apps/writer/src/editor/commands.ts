@@ -2,12 +2,15 @@ import { type Command } from '@234/shared';
 import { setBlockType, toggleMark } from 'prosemirror-commands';
 import { redo, undo } from 'prosemirror-history';
 import { wrapInList } from 'prosemirror-schema-list';
-import { type Command as PMCommand } from 'prosemirror-state';
+import { type Node as PMNode } from 'prosemirror-model';
+import { type Command as PMCommand, NodeSelection, type EditorState } from 'prosemirror-state';
 import { type EditorView } from 'prosemirror-view';
 import {
   bulletListNode,
   emMark,
   headingNode,
+  type ImageAnchor,
+  imageNode,
   orderedListNode,
   paragraphNode,
   strongMark,
@@ -92,4 +95,44 @@ export function refreshStyledBlocks(view: EditorView): void {
     return true;
   });
   if (tr.steps.length > 0) view.dispatch(tr.setMeta('addToHistory', false));
+}
+
+// --- Image block (Phase 2 part 2) ---
+
+export interface SelectedImage {
+  node: PMNode;
+  pos: number;
+}
+
+/** The currently selected image, if the selection is a NodeSelection on one. */
+export function selectedImage(state: EditorState): SelectedImage | null {
+  const { selection } = state;
+  if (selection instanceof NodeSelection && selection.node.type === imageNode) {
+    return { node: selection.node, pos: selection.from };
+  }
+  return null;
+}
+
+/** Insert a block image at the selection. Images never float (draggable:false). */
+export function insertImage(
+  view: EditorView,
+  attrs: { src: string; alt?: string; anchor?: ImageAnchor },
+): void {
+  const node = imageNode.create({
+    src: attrs.src,
+    alt: attrs.alt ?? '',
+    anchor: attrs.anchor ?? 'center',
+  });
+  view.dispatch(view.state.tr.replaceSelectionWith(node));
+  view.focus();
+}
+
+/** Set the anchor (left/center/right) of the selected image — the anchor picker. */
+export function setImageAnchor(view: EditorView, anchor: ImageAnchor): void {
+  const selected = selectedImage(view.state);
+  if (!selected) return;
+  view.dispatch(
+    view.state.tr.setNodeMarkup(selected.pos, undefined, { ...selected.node.attrs, anchor }),
+  );
+  view.focus();
 }

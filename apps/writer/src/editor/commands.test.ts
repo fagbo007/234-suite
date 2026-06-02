@@ -1,9 +1,15 @@
 import { baseKeymap } from 'prosemirror-commands';
 import { keymap } from 'prosemirror-keymap';
-import { EditorState, TextSelection } from 'prosemirror-state';
+import { EditorState, NodeSelection, TextSelection } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
 import { afterEach, describe, expect, it } from 'vitest';
-import { applyStyleToSelection, writerCommands } from './commands';
+import {
+  applyStyleToSelection,
+  insertImage,
+  selectedImage,
+  setImageAnchor,
+  writerCommands,
+} from './commands';
 import { schema, strongMark } from './schema';
 
 let view: EditorView | null = null;
@@ -63,5 +69,20 @@ describe('writerCommands', () => {
     view = mountHello();
     applyStyleToSelection(view, 'title');
     expect(view.state.doc.firstChild?.attrs.styleId).toBe('title');
+  });
+
+  it('inserts a block image and sets its anchor via the picker', () => {
+    view = mountHello();
+    insertImage(view, { src: 'data:image/png;base64,AAA' });
+
+    let imagePos = -1;
+    view.state.doc.descendants((node, pos) => {
+      if (node.type.name === 'image') imagePos = pos;
+    });
+    expect(imagePos).toBeGreaterThanOrEqual(0);
+
+    view.dispatch(view.state.tr.setSelection(NodeSelection.create(view.state.doc, imagePos)));
+    setImageAnchor(view, 'right');
+    expect(selectedImage(view.state)?.node.attrs.anchor).toBe('right');
   });
 });
