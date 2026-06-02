@@ -14,6 +14,18 @@ import { a1ToCell } from './a1';
 /** Resolve a cell to its numeric value, or null when the cell is empty. */
 export type CellResolver = (row: number, col: number) => number | null;
 
+/**
+ * Resolve a reference token to coordinates. The engine injects one that checks
+ * the named-reference registry first, then A1 (root CLAUDE.md §3.4). The default
+ * is A1-only.
+ */
+export type RefResolver = (ref: string) => [number, number];
+
+function defaultRefResolver(ref: string): [number, number] {
+  const { row, col } = a1ToCell(ref);
+  return [row, col];
+}
+
 type Token =
   | { type: 'num'; value: string }
   | { type: 'ident'; value: string }
@@ -85,6 +97,7 @@ class Parser {
   constructor(
     source: string,
     private readonly resolve: CellResolver,
+    private readonly resolveRef: RefResolver = defaultRefResolver,
   ) {
     this.tokens = tokenize(source);
   }
@@ -216,11 +229,14 @@ class Parser {
   }
 
   private coord(ref: string): [number, number] {
-    const { row, col } = a1ToCell(ref); // throws on a non-A1 token → mapped to #ERROR!
-    return [row, col];
+    return this.resolveRef(ref); // named ref → A1 → throws #NAME?/#ERROR! (engine-injected)
   }
 }
 
-export function evaluateFormula(source: string, resolve: CellResolver): number {
-  return new Parser(source, resolve).parse();
+export function evaluateFormula(
+  source: string,
+  resolve: CellResolver,
+  resolveRef?: RefResolver,
+): number {
+  return new Parser(source, resolve, resolveRef).parse();
 }

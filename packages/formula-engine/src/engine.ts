@@ -1,25 +1,35 @@
+import { a1ToCell } from './a1';
 import { evaluateFormula } from './formula';
+import { NamedReferenceRegistry } from './namedRefs';
 
 export interface UsedRange {
   rows: number;
   cols: number;
 }
 
+export interface NamedCell {
+  row: number;
+  col: number;
+}
+
 export type CellValue = string | number | boolean | null;
 
 const ERROR_CODE = /^#.*[!?]$/;
+const SHEET = 0;
 
 /**
  * In-house, MIT-licensed spreadsheet engine. Stores raw cell contents and
  * evaluates formulas lazily via `formula.ts`. Replaces HyperFormula (GPLv3) so
  * the suite stays cleanly MIT (see docs/architecture/formula-refs.md §6).
  *
- * A1 references inside formulas are the evaluation boundary and stay hidden
- * behind this engine + the translation layer (root CLAUDE.md §3.4). Phase 1
- * scope: arithmetic + SUM/AVERAGE/COUNT.
+ * Formulas may reference cells by **named reference** (resolved via the
+ * translation-layer registry) or by A1 (the evaluation boundary). The registry
+ * stores coordinates — never raw A1 (root CLAUDE.md §3.4, §16). Phase 1 scope:
+ * arithmetic + SUM/AVERAGE/COUNT.
  */
 export class SheetEngine {
-  private readonly cells = new Map<string, string>();
+  private cells = new Map<string, string>();
+  private readonly registry = new NamedReferenceRegistry();
 
   private key(row: number, col: number): string {
     return `${row},${col}`;
@@ -50,10 +60,81 @@ export class SheetEngine {
     return { rows, cols };
   }
 
-  /** Clears all cells. (No external resource to release — kept for API parity.) */
+  // --- Named references (translation layer) ---
+
+  defineName(name: string, row: number, col: number): void {
+    this.registry.register(name, { sheet: SHEET, row, col });
+  }
+
+  removeName(name: string): void {
+    this.registry.remove(name);
+  }
+
+  names(): string[] {
+    return this.registry.names();
+  }
+
+  nameAt(row: number, col: number): string | undefined {
+    return this.registry.getName({ sheet: SHEET, row, col });
+  }
+
+  coordOf(name: string): NamedCell | undefined {
+    const coord = this.registry.resolve(name);
+    return coord ? { row: coord.row, col: coord.col } : undefined;
+  }
+
+  /** Export named references as coordinates (for `.fwsh.meta` — never A1). */
+  exportNames(): Record<string, NamedCell> {
+    const out: Record<string, NamedCell> = {};
+    for (const name of this.registry.names()) {
+      const coord = this.registry.resolve(name);
+      if (coord) out[name] = { row: coord.row, col: coord.col };
+    }
+    return out;
+  }
+
+  // --- Structural edits (preserve named-reference integrity) ---
+
+  /** Insert a row at `at`: shift cell contents down and shift named refs. */
+  insertRow(at: number): void {
+    this.cells = this.shiftCells((r) => (r >= at ? r + 1 : r), (c) => c);
+    this.registry.onInsertRows(SHEET, at, 1);
+  }
+
+  /** Insert a column at `at`: shift cell contents right and shift named refs. */
+  insertColumn(at: number): void {
+    this.cells = this.shiftCells((r) => r, (c) => (c >= at ? c + 1 : c));
+    this.registry.onInsertColumns(SHEET, at, 1);
+  }
+
+  private shiftCells(
+    mapRow: (row: number) => number,
+    mapCol: (col: number) => number,
+  ): Map<string, string> {
+    const next = new Map<string, string>();
+    for (const [key, raw] of this.cells) {
+      const [r, c] = key.split(',').map(Number) as [number, number];
+      next.set(this.key(mapRow(r), mapCol(c)), raw);
+    }
+    return next;
+  }
+
+  /** Clears cells and named references. */
   destroy(): void {
     this.cells.clear();
+    for (const name of this.registry.names()) this.registry.remove(name);
   }
+
+  private resolveRef = (ref: string): [number, number] => {
+    const named = this.registry.resolve(ref);
+    if (named) return [named.row, named.col];
+    try {
+      const { row, col } = a1ToCell(ref);
+      return [row, col];
+    } catch {
+      throw new Error('#NAME?'); // unknown name and not A1
+    }
+  };
 
   private compute(row: number, col: number, visiting: Set<string>): CellValue {
     const raw = this.getRaw(row, col);
@@ -67,7 +148,11 @@ export class SheetEngine {
     if (visiting.has(key)) return '#CYCLE!';
     visiting.add(key);
     try {
-      return evaluateFormula(raw.slice(1), (r, c) => this.computeNumeric(r, c, visiting));
+      return evaluateFormula(
+        raw.slice(1),
+        (r, c) => this.computeNumeric(r, c, visiting),
+        this.resolveRef,
+      );
     } catch (error) {
       const message = error instanceof Error ? error.message : '';
       return ERROR_CODE.test(message) ? message : '#ERROR!';

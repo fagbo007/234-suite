@@ -52,4 +52,35 @@ describe('SheetEngine', () => {
     expect(engine.getValue(1, 0)).toBe('#NAME?');
     expect(engine.getValue(2, 0)).toBe('#CYCLE!');
   });
+
+  it('resolves named references in formulas', () => {
+    engine = new SheetEngine();
+    engine.setCell(0, 0, '10');
+    engine.defineName('rev', 0, 0);
+    engine.setCell(1, 0, '=rev*2');
+    expect(engine.getValue(1, 0)).toBe(20);
+    expect(engine.nameAt(0, 0)).toBe('rev');
+  });
+
+  it('reports an unknown name as #NAME?', () => {
+    engine = new SheetEngine();
+    engine.setCell(0, 0, '=missing');
+    expect(engine.getValue(0, 0)).toBe('#NAME?');
+  });
+
+  it('preserves named references on row insert (while raw A1 does not follow)', () => {
+    engine = new SheetEngine();
+    engine.setCell(2, 0, '30'); // A3 = 30
+    engine.defineName('tot', 2, 0); // tot → A3
+    engine.setCell(0, 1, '=tot'); // B1
+    engine.setCell(0, 2, '=A3'); // C1
+    expect(engine.getValue(0, 1)).toBe(30);
+    expect(engine.getValue(0, 2)).toBe(30);
+
+    engine.insertRow(0); // everything shifts down; tot follows to A4
+
+    expect(engine.getValue(1, 1)).toBe(30); // =tot still correct
+    expect(engine.getValue(1, 2)).toBe(0); // =A3 now points at the empty inserted row
+    expect(engine.coordOf('tot')).toEqual({ row: 3, col: 0 });
+  });
 });

@@ -17,7 +17,8 @@ export interface ColumnSchema {
 
 export interface FwshMeta {
   columns: ColumnSchema[];
-  namedRanges: Record<string, string>;
+  /** Named references as coordinates — never raw A1 (root CLAUDE.md §3.4, §16). */
+  namedRanges: Record<string, { row: number; col: number }>;
 }
 
 export interface FwshDocument {
@@ -29,7 +30,7 @@ function csvEscape(value: string): string {
   return /[",\n\r]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
 }
 
-/** Serialise the engine's used range to `.fwsh` (CSV + meta). */
+/** Serialise the engine's used range to `.fwsh` (CSV + meta incl. named ranges). */
 export function serializeFwsh(engine: SheetEngine, meta: FwshMeta): FwshDocument {
   const { rows, cols } = engine.usedRange();
   const lines: string[] = [];
@@ -40,7 +41,17 @@ export function serializeFwsh(engine: SheetEngine, meta: FwshMeta): FwshDocument
     }
     lines.push(cells.join(','));
   }
-  return { csv: lines.join('\n'), meta };
+  return { csv: lines.join('\n'), meta: { ...meta, namedRanges: engine.exportNames() } };
+}
+
+/** Load named references from `.fwsh.meta` into an engine. */
+export function applyNamedRanges(
+  engine: SheetEngine,
+  namedRanges: Record<string, { row: number; col: number }>,
+): void {
+  for (const [name, coord] of Object.entries(namedRanges)) {
+    engine.defineName(name, coord.row, coord.col);
+  }
 }
 
 /** Parse `.fwsh` CSV into a 2D array of raw cell contents. */
