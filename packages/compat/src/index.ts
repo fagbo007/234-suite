@@ -2,10 +2,19 @@
 //
 // Every import completes and logs fidelity losses to a user-visible import
 // report — never silently mangles or discards content. Dependency-light + scoped
-// (owner decision): fflate for ZIP, browser/jsdom DOMParser for reads. Part 1
-// ships `.docx` ↔ Writer; `.xlsx`/`.pptx` follow.
+// (owner decision): fflate for ZIP, browser/jsdom DOMParser for reads.
+// `.docx` ↔ Writer, `.xlsx` ↔ Sheet, `.pptx` ↔ Slides.
 export { importDocx, exportDocx, docxToBlocks, blocksToDocx } from './docx';
 export { importXlsx, exportXlsx, xlsxToCells, cellsToXlsx } from './xlsx';
+export {
+  importPptx,
+  exportPptx,
+  pptxToDeck,
+  deckToPptx,
+  type PptxDeck,
+  type PptxSlide,
+  type PptxObject,
+} from './pptx';
 export { refToRowCol, rowColToRef } from './a1';
 export { type DocBlock, type TextRun, blocksToMarkdown, markdownToBlocks } from './blocks';
 export { type ImportReport, type FidelityLoss, createImportReport } from './report';

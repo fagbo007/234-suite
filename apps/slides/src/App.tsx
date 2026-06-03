@@ -1,7 +1,9 @@
 import { AiActionPanel, AiSettings, AiSidebar, useAiSettings, useAiSidebar } from '@234/ai-sidebar';
+import { exportPptx, importPptx, type ImportReport } from '@234/compat';
 import {
   Button,
   CommandPalette,
+  ImportReportPanel,
   registerCommand,
   toggleTheme,
   useCommandPalette,
@@ -9,6 +11,7 @@ import {
 import { type ChangeEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { slidesActions } from './ai/slidesActions';
 import { AnimationPanel } from './anim/AnimationPanel';
+import { modelToPptxDeck, pptxDeckToModel } from './compat/pptxMap';
 import styles from './App.module.css';
 import { SlideCanvas } from './canvas/SlideCanvas';
 import { compressImage, fileToDataUrl } from './canvas/imageImport';
@@ -49,6 +52,7 @@ export default function App() {
   const [presenting, setPresenting] = useState(false);
   const ai = useAiSidebar('slides');
   const { settings: aiSettings, setSettings: setAiSettings, provider: aiProvider } = useAiSettings();
+  const [importReport, setImportReport] = useState<ImportReport | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Latest state for palette command closures (registered once on mount).
@@ -85,11 +89,49 @@ export default function App() {
     });
   }, []);
 
+  // Open a .pptx → replace the deck (via @234/compat) + show the import report.
+  const openPptx = useCallback(() => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.pptx';
+    input.onchange = () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      void file.arrayBuffer().then((buffer) => {
+        const { deck: pptx, report } = importPptx(new Uint8Array(buffer));
+        const model = pptxDeckToModel(pptx);
+        if (model.slides.length > 0) {
+          setActiveIndex(0);
+          setDeck(model);
+        }
+        setImportReport(report);
+      });
+    };
+    input.click();
+  }, []);
+
+  // Export the deck to a downloadable .pptx.
+  const handleExportPptx = useCallback(() => {
+    const bytes = exportPptx(modelToPptxDeck(stateRef.current.deck));
+    const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+    const blob = new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'presentation.pptx';
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }, []);
+
   useEffect(() => {
     const unregister = [
       registerCommand({ id: 'slides.add-text', title: 'Add text', group: 'Insert', run: () => insert(makeText) }),
       registerCommand({ id: 'slides.add-rect', title: 'Add rectangle', group: 'Insert', run: () => insert(makeRect) }),
       registerCommand({ id: 'slides.import-image', title: 'Import image', group: 'Insert', run: () => importImage() }),
+      registerCommand({ id: 'slides.open-pptx', title: 'Open .pptx', group: 'File', run: openPptx }),
+      registerCommand({ id: 'slides.export-pptx', title: 'Export .pptx', group: 'File', run: handleExportPptx }),
       registerCommand({ id: 'slides.tidy', title: 'Tidy slide', group: 'Arrange', run: () => tidy() }),
       registerCommand({
         id: 'slides.animate',
@@ -110,7 +152,7 @@ export default function App() {
     return () => {
       for (const remove of unregister) remove();
     };
-  }, [insert, tidy, importImage, ai]);
+  }, [insert, tidy, importImage, ai, openPptx, handleExportPptx]);
 
   const handleAdd = () => {
     setActiveIndex(deck.slides.length);
@@ -160,6 +202,12 @@ export default function App() {
         <Button variant="secondary" onClick={() => setPresenting(true)}>
           Present
         </Button>
+        <Button variant="ghost" onClick={openPptx}>
+          Open .pptx
+        </Button>
+        <Button variant="ghost" onClick={handleExportPptx}>
+          Export .pptx
+        </Button>
         <Button variant="ghost" onClick={ai.toggle}>
           AI assistant
         </Button>
@@ -175,6 +223,9 @@ export default function App() {
         hidden
         onChange={onFileChange}
       />
+      {importReport ? (
+        <ImportReportPanel report={importReport} onClose={() => setImportReport(null)} />
+      ) : null}
       <div className={styles.workspace}>
         <SlidePanel
           deck={deck}

@@ -46,6 +46,12 @@ describe('234 Slides app', () => {
     expect(screen.getByLabelText('Import image file')).toBeTruthy();
   });
 
+  it('offers .pptx import/export', () => {
+    render(<App />);
+    expect(screen.getByRole('button', { name: 'Open .pptx' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Export .pptx' })).toBeTruthy();
+  });
+
   it('keeps the AI sidebar closed by default and shows Slides AI actions when opened', () => {
     render(<App />);
     expect(screen.queryByRole('complementary', { name: 'AI assistant' })).toBeNull();

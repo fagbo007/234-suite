@@ -121,6 +121,9 @@ importers:
       '@234/ai-sidebar':
         specifier: workspace:*
         version: link:../../packages/ai-sidebar
+      '@234/compat':
+        specifier: workspace:*
+        version: link:../../packages/compat
       '@234/shared':
         specifier: workspace:*
         version: link:../shared
