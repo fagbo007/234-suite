@@ -1,4 +1,4 @@
-import { AiSidebar, useAiSidebar } from '@234/ai-sidebar';
+import { AiActionPanel, AiSettings, AiSidebar, useAiSettings, useAiSidebar } from '@234/ai-sidebar';
 import { SheetEngine } from '@234/formula-engine';
 import {
   Button,
@@ -16,6 +16,7 @@ import { ColumnInspector, type ColumnSchemaValue } from './grid/ColumnInspector'
 import { FormulaBar } from './grid/FormulaBar';
 import { Grid, type ColumnTypeMap, type NumericRule } from './grid/Grid';
 import { NameBox } from './grid/NameBox';
+import { sheetActions } from './ai/sheetActions';
 import { LinkAuditor } from './inspector/LinkAuditor';
 import { RuleDialog, type RuleDraft } from './inspector/RuleDialog';
 
@@ -40,6 +41,7 @@ export default function App() {
   const [conditionalRule, setConditionalRule] = useState<NumericRule | null>(null);
   const [validationRule, setValidationRule] = useState<NumericRule | null>(null);
   const ai = useAiSidebar('sheet');
+  const { settings: aiSettings, setSettings: setAiSettings, provider: aiProvider } = useAiSettings();
   const bump = useCallback(() => setRevision((value) => value + 1), []);
 
   const activeRef = useRef(active);
@@ -204,7 +206,20 @@ export default function App() {
             validationRule={validationRule}
           />
         </div>
-        <AiSidebar open={ai.isOpen} onClose={ai.close} app="sheet" />
+        <AiSidebar open={ai.isOpen} onClose={ai.close} app="sheet">
+          <AiSettings settings={aiSettings} onChange={setAiSettings} />
+          <AiActionPanel
+            actions={sheetActions({
+              engine,
+              active,
+              onInsertFormula: (formula) => {
+                engine.setCell(active.row, active.col, formula);
+                bump();
+              },
+            })}
+            provider={aiProvider}
+          />
+        </AiSidebar>
       </div>
       <CommandPalette isOpen={palette.isOpen} onClose={palette.close} context={{ app: 'sheet' }} />
     </div>

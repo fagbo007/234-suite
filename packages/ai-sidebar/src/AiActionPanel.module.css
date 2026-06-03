@@ -13,6 +13,28 @@
   list-style: none;
 }
 
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.promptInput {
+  width: 100%;
+  box-sizing: border-box;
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--font-size-body);
+  color: var(--color-fg-primary);
+  background: var(--color-bg-base);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-interactive);
+}
+
+.promptInput:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 1px;
+}
+
 .action {
   display: flex;
   flex-direction: column;

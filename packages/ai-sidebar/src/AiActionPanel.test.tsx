@@ -33,4 +33,27 @@ describe('AiActionPanel', () => {
     render(<AiActionPanel actions={[action]} provider={mockProvider} />);
     expect((screen.getByRole('button', { name: /explain/i }) as HTMLButtonElement).disabled).toBe(true);
   });
+
+  it('runs a free-text prompt action from typed input', async () => {
+    const action: AiAction = {
+      id: 'nl-formula',
+      label: 'Natural language to formula',
+      promptPlaceholder: 'Describe the formula…',
+      buildPrompt: (input) => ({ prompt: `Formula for: ${input}` }),
+    };
+    render(<AiActionPanel actions={[action]} provider={mockProvider} />);
+
+    const run = screen.getByRole('button', { name: /natural language to formula/i }) as HTMLButtonElement;
+    expect(run.disabled).toBe(true); // empty input → disabled
+
+    fireEvent.change(screen.getByLabelText('Natural language to formula input'), {
+      target: { value: 'total of column A' },
+    });
+    expect(run.disabled).toBe(false);
+
+    fireEvent.click(run);
+    await waitFor(() =>
+      expect(screen.getByText('[sample output] Formula for: total of column A')).toBeTruthy(),
+    );
+  });
 });

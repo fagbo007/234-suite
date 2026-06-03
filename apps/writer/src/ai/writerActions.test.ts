@@ -23,7 +23,7 @@ describe('writerActions', () => {
       'writer.ai.continue',
     ]);
     // No view → no input → the panel disables every action.
-    expect(actions.every((a) => a.getInput() === null)).toBe(true);
+    expect(actions.every((a) => a.getInput?.() === null)).toBe(true);
   });
 
   it('keeps explain read-only (no document side-effect)', () => {
