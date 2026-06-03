@@ -1,0 +1,10 @@
+{
+  "name": "title-bar",
+  "author": "234 community",
+  "tags": [
+    "title",
+    "accent"
+  ],
+  "description": "Title slide with an accent bar.",
+  "license": "MIT"
+}

@@ -1,0 +1,10 @@
+{
+  "name": "comparison",
+  "author": "234 community",
+  "tags": [
+    "comparison",
+    "columns"
+  ],
+  "description": "Side-by-side comparison of two options.",
+  "license": "MIT"
+}

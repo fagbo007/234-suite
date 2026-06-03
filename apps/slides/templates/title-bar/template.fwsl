@@ -1,0 +1,38 @@
+{
+  "slides": [
+    {
+      "id": "title-bar-slide",
+      "objects": [
+        {
+          "id": "b-0",
+          "kind": "rect",
+          "x": 0,
+          "y": 0,
+          "width": 960,
+          "height": 12,
+          "fill": "slateblue"
+        },
+        {
+          "id": "t-0",
+          "kind": "text",
+          "x": 80,
+          "y": 210,
+          "width": 800,
+          "height": 72,
+          "text": "Presentation title",
+          "fontSize": 44
+        },
+        {
+          "id": "t-1",
+          "kind": "text",
+          "x": 80,
+          "y": 300,
+          "width": 800,
+          "height": 40,
+          "text": "Subtitle or author",
+          "fontSize": 22
+        }
+      ]
+    }
+  ]
+}

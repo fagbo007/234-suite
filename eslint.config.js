@@ -11,6 +11,8 @@ export default tseslint.config(
       'coverage/**',
       'playwright-report/**',
       'test-results/**',
+      // Author tooling — plain Node ESM, run manually to generate templates.
+      'apps/slides/templates/scaffold.mjs',
     ],
   },
   js.configs.recommended,

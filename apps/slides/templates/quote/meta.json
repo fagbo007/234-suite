@@ -1,0 +1,9 @@
+{
+  "name": "quote",
+  "author": "234 community",
+  "tags": [
+    "quote"
+  ],
+  "description": "A large pull quote with attribution.",
+  "license": "MIT"
+}

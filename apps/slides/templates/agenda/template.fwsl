@@ -1,0 +1,49 @@
+{
+  "slides": [
+    {
+      "id": "agenda-slide",
+      "objects": [
+        {
+          "id": "t-0",
+          "kind": "text",
+          "x": 80,
+          "y": 60,
+          "width": 800,
+          "height": 60,
+          "text": "Agenda",
+          "fontSize": 36
+        },
+        {
+          "id": "t-1",
+          "kind": "text",
+          "x": 80,
+          "y": 160,
+          "width": 800,
+          "height": 48,
+          "text": "First item",
+          "fontSize": 24
+        },
+        {
+          "id": "t-2",
+          "kind": "text",
+          "x": 80,
+          "y": 232,
+          "width": 800,
+          "height": 48,
+          "text": "Second item",
+          "fontSize": 24
+        },
+        {
+          "id": "t-3",
+          "kind": "text",
+          "x": 80,
+          "y": 304,
+          "width": 800,
+          "height": 48,
+          "text": "Third item",
+          "fontSize": 24
+        }
+      ]
+    }
+  ]
+}

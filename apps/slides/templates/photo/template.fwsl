@@ -1,0 +1,28 @@
+{
+  "slides": [
+    {
+      "id": "photo-slide",
+      "objects": [
+        {
+          "id": "i-0",
+          "kind": "image",
+          "x": 80,
+          "y": 80,
+          "width": 520,
+          "height": 380,
+          "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+        },
+        {
+          "id": "t-0",
+          "kind": "text",
+          "x": 640,
+          "y": 80,
+          "width": 240,
+          "height": 380,
+          "text": "Caption text",
+          "fontSize": 22
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "slides": [
+    {
+      "id": "section-slide",
+      "objects": [
+        {
+          "id": "r-0",
+          "kind": "rect",
+          "x": 80,
+          "y": 180,
+          "width": 120,
+          "height": 120,
+          "fill": "slateblue"
+        },
+        {
+          "id": "t-0",
+          "kind": "text",
+          "x": 240,
+          "y": 210,
+          "width": 640,
+          "height": 72,
+          "text": "Section title",
+          "fontSize": 40
+        }
+      ]
+    }
+  ]
+}

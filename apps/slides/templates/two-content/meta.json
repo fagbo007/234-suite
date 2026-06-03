@@ -1,0 +1,10 @@
+{
+  "name": "two-content",
+  "author": "234 community",
+  "tags": [
+    "content",
+    "columns"
+  ],
+  "description": "A heading over two content columns.",
+  "license": "MIT"
+}

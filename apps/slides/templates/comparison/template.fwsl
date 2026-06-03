@@ -1,0 +1,57 @@
+{
+  "slides": [
+    {
+      "id": "comparison-slide",
+      "objects": [
+        {
+          "id": "t-0",
+          "kind": "text",
+          "x": 80,
+          "y": 48,
+          "width": 800,
+          "height": 52,
+          "text": "Comparison",
+          "fontSize": 32
+        },
+        {
+          "id": "t-1",
+          "kind": "text",
+          "x": 80,
+          "y": 128,
+          "width": 360,
+          "height": 40,
+          "text": "Option A",
+          "fontSize": 22
+        },
+        {
+          "id": "r-0",
+          "kind": "rect",
+          "x": 80,
+          "y": 184,
+          "width": 360,
+          "height": 300,
+          "fill": "cornflowerblue"
+        },
+        {
+          "id": "t-2",
+          "kind": "text",
+          "x": 520,
+          "y": 128,
+          "width": 360,
+          "height": 40,
+          "text": "Option B",
+          "fontSize": 22
+        },
+        {
+          "id": "r-1",
+          "kind": "rect",
+          "x": 520,
+          "y": 184,
+          "width": 360,
+          "height": 300,
+          "fill": "indianred"
+        }
+      ]
+    }
+  ]
+}

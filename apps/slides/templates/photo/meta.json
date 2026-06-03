@@ -1,0 +1,10 @@
+{
+  "name": "photo",
+  "author": "234 community",
+  "tags": [
+    "photo",
+    "image"
+  ],
+  "description": "A large photo with a side caption.",
+  "license": "MIT"
+}

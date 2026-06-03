@@ -1,0 +1,10 @@
+{
+  "name": "section",
+  "author": "234 community",
+  "tags": [
+    "section",
+    "divider"
+  ],
+  "description": "A section divider with a number block.",
+  "license": "MIT"
+}

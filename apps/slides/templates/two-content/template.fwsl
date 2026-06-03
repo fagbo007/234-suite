@@ -1,0 +1,37 @@
+{
+  "slides": [
+    {
+      "id": "two-content-slide",
+      "objects": [
+        {
+          "id": "t-0",
+          "kind": "text",
+          "x": 80,
+          "y": 60,
+          "width": 800,
+          "height": 60,
+          "text": "Two content",
+          "fontSize": 36
+        },
+        {
+          "id": "r-0",
+          "kind": "rect",
+          "x": 80,
+          "y": 160,
+          "width": 360,
+          "height": 300,
+          "fill": "cornflowerblue"
+        },
+        {
+          "id": "r-1",
+          "kind": "rect",
+          "x": 520,
+          "y": 160,
+          "width": 360,
+          "height": 300,
+          "fill": "mediumseagreen"
+        }
+      ]
+    }
+  ]
+}

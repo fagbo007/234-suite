@@ -35,5 +35,8 @@ jobs:
       - name: Unit tests
         run: pnpm test
 
+      - name: Validate slide templates
+        run: pnpm validate:templates
+
       # Benchmarks (Section 8 gates) and Playwright E2E join the matrix once the
       # Tauri windows exist in Steps 3-5.

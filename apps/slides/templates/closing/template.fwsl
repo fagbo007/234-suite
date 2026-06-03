@@ -1,0 +1,29 @@
+{
+  "slides": [
+    {
+      "id": "closing-slide",
+      "objects": [
+        {
+          "id": "t-0",
+          "kind": "text",
+          "x": 80,
+          "y": 200,
+          "width": 800,
+          "height": 80,
+          "text": "Thank you",
+          "fontSize": 52
+        },
+        {
+          "id": "t-1",
+          "kind": "text",
+          "x": 80,
+          "y": 300,
+          "width": 800,
+          "height": 40,
+          "text": "Questions?",
+          "fontSize": 24
+        }
+      ]
+    }
+  ]
+}

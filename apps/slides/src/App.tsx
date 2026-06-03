@@ -5,11 +5,11 @@ import {
   toggleTheme,
   useCommandPalette,
 } from '@234/shared';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { type ChangeEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { AnimationPanel } from './anim/AnimationPanel';
 import styles from './App.module.css';
 import { SlideCanvas } from './canvas/SlideCanvas';
-import { PLACEHOLDER_IMAGE } from './model/assets';
+import { compressImage, fileToDataUrl } from './canvas/imageImport';
 import { findViolations } from './model/constraints';
 import {
   addObject,
@@ -32,8 +32,8 @@ function makeText(): SlideObject {
 function makeRect(): SlideObject {
   return { id: crypto.randomUUID(), kind: 'rect', x: 120, y: 160, width: 240, height: 140, fill: 'cornflowerblue' };
 }
-function makeImage(): SlideObject {
-  return { id: crypto.randomUUID(), kind: 'image', x: 120, y: 120, width: 160, height: 120, src: PLACEHOLDER_IMAGE };
+function makeImage(src: string): SlideObject {
+  return { id: crypto.randomUUID(), kind: 'image', x: 120, y: 120, width: 320, height: 240, src };
 }
 
 export default function App() {
@@ -42,6 +42,7 @@ export default function App() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [showAnimations, setShowAnimations] = useState(false);
   const [presenting, setPresenting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Latest state for palette command closures (registered once on mount).
   const stateRef = useRef({ deck, activeIndex });
@@ -55,6 +56,20 @@ export default function App() {
     });
   }, []);
 
+  const importImage = useCallback(() => fileInputRef.current?.click(), []);
+
+  const onFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = ''; // allow re-selecting the same file
+    if (!file) return;
+    const src = await compressImage(await fileToDataUrl(file));
+    setDeck((current) => {
+      const slide = current.slides[stateRef.current.activeIndex];
+      if (!slide) return current;
+      return addObject(current, slide.id, makeImage(src));
+    });
+  };
+
   const tidy = useCallback(() => {
     setDeck((current) => {
       const slide = current.slides[stateRef.current.activeIndex];
@@ -67,7 +82,7 @@ export default function App() {
     const unregister = [
       registerCommand({ id: 'slides.add-text', title: 'Add text', group: 'Insert', run: () => insert(makeText) }),
       registerCommand({ id: 'slides.add-rect', title: 'Add rectangle', group: 'Insert', run: () => insert(makeRect) }),
-      registerCommand({ id: 'slides.add-image', title: 'Add image', group: 'Insert', run: () => insert(makeImage) }),
+      registerCommand({ id: 'slides.import-image', title: 'Import image', group: 'Insert', run: () => importImage() }),
       registerCommand({ id: 'slides.tidy', title: 'Tidy slide', group: 'Arrange', run: () => tidy() }),
       registerCommand({
         id: 'slides.animate',
@@ -87,7 +102,7 @@ export default function App() {
     return () => {
       for (const remove of unregister) remove();
     };
-  }, [insert, tidy]);
+  }, [insert, tidy, importImage]);
 
   const handleAdd = () => {
     setActiveIndex(deck.slides.length);
@@ -127,6 +142,9 @@ export default function App() {
             {issueCount} layout {issueCount === 1 ? 'issue' : 'issues'}
           </span>
         ) : null}
+        <Button variant="secondary" onClick={importImage}>
+          Import image
+        </Button>
         <Button variant="secondary" onClick={() => setPresenting(true)}>
           Present
         </Button>
@@ -134,6 +152,14 @@ export default function App() {
           Command palette
         </Button>
       </header>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        aria-label="Import image file"
+        hidden
+        onChange={onFileChange}
+      />
       <div className={styles.workspace}>
         <SlidePanel
           deck={deck}

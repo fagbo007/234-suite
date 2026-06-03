@@ -39,4 +39,10 @@ describe('234 Slides app', () => {
     fireEvent.change(screen.getByRole('combobox'), { target: { value: 'animate' } });
     expect(screen.getByText('Animate objects')).toBeTruthy();
   });
+
+  it('offers image import (button + hidden file input)', () => {
+    render(<App />);
+    expect(screen.getByRole('button', { name: /import image/i })).toBeTruthy();
+    expect(screen.getByLabelText('Import image file')).toBeTruthy();
+  });
 });

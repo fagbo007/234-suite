@@ -1,0 +1,29 @@
+{
+  "slides": [
+    {
+      "id": "quote-slide",
+      "objects": [
+        {
+          "id": "t-0",
+          "kind": "text",
+          "x": 120,
+          "y": 180,
+          "width": 720,
+          "height": 160,
+          "text": "“A memorable quote.”",
+          "fontSize": 36
+        },
+        {
+          "id": "t-1",
+          "kind": "text",
+          "x": 120,
+          "y": 360,
+          "width": 720,
+          "height": 40,
+          "text": "— Attribution",
+          "fontSize": 22
+        }
+      ]
+    }
+  ]
+}
