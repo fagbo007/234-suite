@@ -1,3 +1,4 @@
+import { AiSidebar, useAiSidebar } from '@234/ai-sidebar';
 import {
   Button,
   CommandPalette,
@@ -42,6 +43,7 @@ export default function App() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [showAnimations, setShowAnimations] = useState(false);
   const [presenting, setPresenting] = useState(false);
+  const ai = useAiSidebar('slides');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Latest state for palette command closures (registered once on mount).
@@ -96,13 +98,14 @@ export default function App() {
         group: 'View',
         run: () => setPresenting(true),
       }),
+      registerCommand({ id: 'slides.ai', title: 'Toggle AI assistant', group: 'AI', run: () => ai.toggle() }),
       registerCommand({ id: 'slides.toggle-theme', title: 'Toggle theme', group: 'View', run: () => toggleTheme() }),
       registerCommand({ id: 'slides.about', title: 'About 234 Slides', group: 'Help', run: () => console.info('234 Slides — Phase 2') }),
     ];
     return () => {
       for (const remove of unregister) remove();
     };
-  }, [insert, tidy, importImage]);
+  }, [insert, tidy, importImage, ai]);
 
   const handleAdd = () => {
     setActiveIndex(deck.slides.length);
@@ -148,6 +151,9 @@ export default function App() {
         <Button variant="secondary" onClick={() => setPresenting(true)}>
           Present
         </Button>
+        <Button variant="ghost" onClick={ai.toggle}>
+          AI assistant
+        </Button>
         <Button variant="secondary" onClick={palette.open}>
           Command palette
         </Button>
@@ -174,6 +180,7 @@ export default function App() {
           <NotesPanel notes={activeSlide?.notes ?? ''} onChange={handleNotesChange} />
         </div>
         {showAnimations ? <AnimationPanel slide={activeSlide} onUpdateObject={handleUpdateObject} /> : null}
+        <AiSidebar open={ai.isOpen} onClose={ai.close} app="slides" />
       </div>
       <CommandPalette isOpen={palette.isOpen} onClose={palette.close} context={{ app: 'slides' }} />
     </div>

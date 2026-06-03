@@ -1,3 +1,4 @@
+import { AiSidebar, useAiSidebar } from '@234/ai-sidebar';
 import { SheetEngine } from '@234/formula-engine';
 import {
   Button,
@@ -38,6 +39,7 @@ export default function App() {
   const [chart, setChart] = useState<Chart | null>(null);
   const [conditionalRule, setConditionalRule] = useState<NumericRule | null>(null);
   const [validationRule, setValidationRule] = useState<NumericRule | null>(null);
+  const ai = useAiSidebar('sheet');
   const bump = useCallback(() => setRevision((value) => value + 1), []);
 
   const activeRef = useRef(active);
@@ -117,6 +119,12 @@ export default function App() {
         run: () => setPanel('validation'),
       }),
       registerCommand({
+        id: 'sheet.ai',
+        title: 'Toggle AI assistant',
+        group: 'AI',
+        run: () => ai.toggle(),
+      }),
+      registerCommand({
         id: 'sheet.toggle-theme',
         title: 'Toggle theme',
         group: 'View',
@@ -132,15 +140,20 @@ export default function App() {
     return () => {
       for (const remove of unregister) remove();
     };
-  }, [engine, bump]);
+  }, [engine, bump, ai]);
 
   return (
     <div className={styles.app}>
       <header className={styles.header}>
         <h1 className={styles.title}>234 Sheet</h1>
-        <Button variant="secondary" onClick={palette.open}>
-          Command palette
-        </Button>
+        <div className={styles.actions}>
+          <Button variant="ghost" onClick={ai.toggle}>
+            AI assistant
+          </Button>
+          <Button variant="secondary" onClick={palette.open}>
+            Command palette
+          </Button>
+        </div>
       </header>
       <div className={styles.formulaRow}>
         <NameBox engine={engine} active={active} onCommit={bump} />
@@ -179,15 +192,20 @@ export default function App() {
       {chart ? (
         <ChartView type={chart.type} values={chartValues(engine, chart.range)} title={chart.title} />
       ) : null}
-      <Grid
-        engine={engine}
-        active={active}
-        onSelect={(row, col) => setActive({ row, col })}
-        revision={revision}
-        columnTypes={columnTypes}
-        conditionalRule={conditionalRule}
-        validationRule={validationRule}
-      />
+      <div className={styles.gridRow}>
+        <div className={styles.gridMain}>
+          <Grid
+            engine={engine}
+            active={active}
+            onSelect={(row, col) => setActive({ row, col })}
+            revision={revision}
+            columnTypes={columnTypes}
+            conditionalRule={conditionalRule}
+            validationRule={validationRule}
+          />
+        </div>
+        <AiSidebar open={ai.isOpen} onClose={ai.close} app="sheet" />
+      </div>
       <CommandPalette isOpen={palette.isOpen} onClose={palette.close} context={{ app: 'sheet' }} />
     </div>
   );

@@ -1,3 +1,4 @@
+import { AiSidebar, useAiSidebar } from '@234/ai-sidebar';
 import {
   Button,
   CommandPalette,
@@ -28,6 +29,7 @@ export default function App() {
   const [findOpen, setFindOpen] = useState(false);
   const [stylesOpen, setStylesOpen] = useState(true);
   const [imageSel, setImageSel] = useState<SelectedImage | null>(null);
+  const ai = useAiSidebar('writer');
 
   const viewRef = useRef<EditorView | null>(null);
   viewRef.current = view;
@@ -79,13 +81,14 @@ export default function App() {
       registerCommand({ id: 'writer.find', title: 'Find and replace', group: 'Edit', run: () => setFindOpen(true) }),
       registerCommand({ id: 'writer.insert-image', title: 'Insert image', group: 'Insert', run: pickImage }),
       registerCommand({ id: 'writer.edit-styles', title: 'Edit styles', group: 'Format', run: () => setStylesOpen(true) }),
+      registerCommand({ id: 'writer.ai', title: 'Toggle AI assistant', group: 'AI', run: () => ai.toggle() }),
       registerCommand({ id: 'writer.toggle-theme', title: 'Toggle theme', group: 'View', run: () => toggleTheme() }),
       registerCommand({ id: 'writer.about', title: 'About 234 Writer', group: 'Help', run: () => console.info('234 Writer — Phase 2') }),
     ];
     return () => {
       for (const remove of unregister) remove();
     };
-  }, [pickImage]);
+  }, [pickImage, ai]);
 
   const applyStyle = (styleId: string) => {
     if (view) applyStyleToSelection(view, styleId);
@@ -105,6 +108,9 @@ export default function App() {
           <Button variant="ghost" onClick={pickImage}>
             Insert image
           </Button>
+          <Button variant="ghost" onClick={ai.toggle}>
+            AI assistant
+          </Button>
           <Button variant="secondary" onClick={palette.open}>
             Command palette
           </Button>
@@ -122,6 +128,7 @@ export default function App() {
         ) : stylesOpen ? (
           <StyleEditor registry={registry} onChange={setRegistry} onApply={applyStyle} />
         ) : null}
+        <AiSidebar open={ai.isOpen} onClose={ai.close} app="writer" />
       </div>
 
       <CommandPalette isOpen={palette.isOpen} onClose={palette.close} context={{ app: 'writer' }} />

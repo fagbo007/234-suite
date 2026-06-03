@@ -12,6 +12,7 @@
     "tauri": "tauri"
   },
   "dependencies": {
+    "@234/ai-sidebar": "workspace:*",
     "@234/shared": "workspace:*",
     "prosemirror-commands": "^1.6.2",
     "prosemirror-history": "^1.4.1",

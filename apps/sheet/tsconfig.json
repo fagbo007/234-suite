@@ -5,5 +5,9 @@
     "rootDir": "."
   },
   "include": ["src", "css.d.ts", "vite.config.ts"],
-  "references": [{ "path": "../shared" }, { "path": "../../packages/formula-engine" }]
+  "references": [
+    { "path": "../shared" },
+    { "path": "../../packages/formula-engine" },
+    { "path": "../../packages/ai-sidebar" }
+  ]
 }

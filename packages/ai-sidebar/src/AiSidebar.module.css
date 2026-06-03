@@ -1,0 +1,57 @@
+/* Docked, never floating (root §16). A flex sibling in the app workspace — not
+   position: fixed, never an overlay over content. */
+.sidebar {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 300px;
+  padding: var(--space-4);
+  background: var(--color-bg-surface);
+  border-left: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  color: var(--color-fg-primary);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.title {
+  font-size: var(--font-size-emphasis);
+  font-weight: var(--font-weight-medium);
+}
+
+.collapse {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-1);
+  color: var(--color-fg-muted);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-interactive);
+  cursor: pointer;
+}
+
+.collapse:hover {
+  color: var(--color-fg-primary);
+}
+
+.collapse:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 1px;
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+}
+
+.placeholder {
+  margin: 0;
+  font-size: var(--font-size-meta);
+  color: var(--color-fg-secondary);
+}

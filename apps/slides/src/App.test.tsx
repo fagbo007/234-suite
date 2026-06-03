@@ -45,4 +45,11 @@ describe('234 Slides app', () => {
     expect(screen.getByRole('button', { name: /import image/i })).toBeTruthy();
     expect(screen.getByLabelText('Import image file')).toBeTruthy();
   });
+
+  it('keeps the AI sidebar closed by default and toggles it on invocation', () => {
+    render(<App />);
+    expect(screen.queryByRole('complementary', { name: 'AI assistant' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'AI assistant' }));
+    expect(screen.getByRole('complementary', { name: 'AI assistant' })).toBeTruthy();
+  });
 });

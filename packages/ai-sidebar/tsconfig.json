@@ -4,5 +4,6 @@
     "outDir": "dist",
     "rootDir": "."
   },
-  "include": ["src"]
+  "include": ["src", "css.d.ts", "vite.config.ts"],
+  "references": [{ "path": "../../apps/shared" }]
 }
