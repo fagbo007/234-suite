@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addObject, addSlide, createDeck, deleteSlide, reorderSlide } from './deck';
+import { addObject, addSlide, createDeck, deleteSlide, reorderSlide, tidySlide } from './deck';
 import { type SlideObject } from './types';
 
 const rect: SlideObject = { id: 'r1', kind: 'rect', x: 0, y: 0, width: 10, height: 10, fill: 'black' };
@@ -30,5 +30,25 @@ describe('deck CRUD', () => {
     const after = addObject(deck, targetId, rect);
     expect(after.slides[1]?.objects).toHaveLength(1);
     expect(after.slides[0]?.objects).toHaveLength(0);
+  });
+
+  it('grid-snaps a new object on add', () => {
+    const deck = createDeck();
+    const slideId = deck.slides[0]!.id;
+    const after = addObject(deck, slideId, { ...rect, x: 13, y: 21 });
+    expect(after.slides[0]?.objects[0]?.x).toBe(16);
+    expect(after.slides[0]?.objects[0]?.y).toBe(24);
+  });
+
+  it('tidySlide snaps all objects to the grid', () => {
+    const deck = createDeck();
+    const slideId = deck.slides[0]!.id;
+    // bypass add-snapping to seed off-grid coordinates
+    const seeded = {
+      slides: [{ ...deck.slides[0]!, objects: [{ ...rect, x: 13, y: 21 }] }],
+    };
+    const tidied = tidySlide(seeded, slideId);
+    expect(tidied.slides[0]?.objects[0]?.x).toBe(16);
+    expect(tidied.slides[0]?.objects[0]?.y).toBe(24);
   });
 });

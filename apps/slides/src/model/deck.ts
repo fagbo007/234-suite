@@ -1,4 +1,5 @@
 import { constraintCheck } from './constraints';
+import { snapToGrid } from './layout';
 import { type Deck, type Slide, type SlideObject } from './types';
 
 function newId(prefix: string): string {
@@ -34,15 +35,29 @@ export function reorderSlide(deck: Deck, from: number, to: number): Deck {
   return { slides };
 }
 
-/** Add an object to a slide. Placement triggers the constraint check (§3). */
+/** Add an object to a slide. Placement is grid-snapped and triggers the check (§3). */
 export function addObject(deck: Deck, slideId: string, object: SlideObject): Deck {
+  const snapped = { ...object, x: snapToGrid(object.x), y: snapToGrid(object.y) };
   return {
     slides: deck.slides.map((slide) => {
       if (slide.id !== slideId) return slide;
-      const objects = [...slide.objects, object];
-      // Phase 1: stub returns true; wired for the Phase 2 auto-layout engine.
-      constraintCheck(objects);
+      const objects = [...slide.objects, snapped];
+      constraintCheck(objects); // advisory — auto-layout guardrail on placement
       return { ...slide, objects };
     }),
+  };
+}
+
+/** Snap every object on a slide to the spacing grid (auto-layout "tidy"). */
+export function tidySlide(deck: Deck, slideId: string): Deck {
+  return {
+    slides: deck.slides.map((slide) =>
+      slide.id === slideId
+        ? {
+            ...slide,
+            objects: slide.objects.map((o) => ({ ...o, x: snapToGrid(o.x), y: snapToGrid(o.y) })),
+          }
+        : slide,
+    ),
   };
 }

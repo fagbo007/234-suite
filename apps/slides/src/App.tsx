@@ -9,7 +9,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import styles from './App.module.css';
 import { SlideCanvas } from './canvas/SlideCanvas';
 import { PLACEHOLDER_IMAGE } from './model/assets';
-import { addObject, addSlide, createDeck, deleteSlide, reorderSlide } from './model/deck';
+import { findViolations } from './model/constraints';
+import { addObject, addSlide, createDeck, deleteSlide, reorderSlide, tidySlide } from './model/deck';
 import { type SlideObject } from './model/types';
 import { SlidePanel } from './panel/SlidePanel';
 
@@ -40,18 +41,27 @@ export default function App() {
     });
   }, []);
 
+  const tidy = useCallback(() => {
+    setDeck((current) => {
+      const slide = current.slides[stateRef.current.activeIndex];
+      if (!slide) return current;
+      return tidySlide(current, slide.id);
+    });
+  }, []);
+
   useEffect(() => {
     const unregister = [
       registerCommand({ id: 'slides.add-text', title: 'Add text', group: 'Insert', run: () => insert(makeText) }),
       registerCommand({ id: 'slides.add-rect', title: 'Add rectangle', group: 'Insert', run: () => insert(makeRect) }),
       registerCommand({ id: 'slides.add-image', title: 'Add image', group: 'Insert', run: () => insert(makeImage) }),
+      registerCommand({ id: 'slides.tidy', title: 'Tidy slide', group: 'Arrange', run: () => tidy() }),
       registerCommand({ id: 'slides.toggle-theme', title: 'Toggle theme', group: 'View', run: () => toggleTheme() }),
       registerCommand({ id: 'slides.about', title: 'About 234 Slides', group: 'Help', run: () => console.info('234 Slides — Phase 1') }),
     ];
     return () => {
       for (const remove of unregister) remove();
     };
-  }, [insert]);
+  }, [insert, tidy]);
 
   const handleAdd = () => {
     setActiveIndex(deck.slides.length);
@@ -67,11 +77,17 @@ export default function App() {
   };
 
   const activeSlide = deck.slides[activeIndex];
+  const issueCount = activeSlide ? findViolations(activeSlide.objects).length : 0;
 
   return (
     <div className={styles.app}>
       <header className={styles.header}>
         <h1 className={styles.title}>234 Slides</h1>
+        {issueCount > 0 ? (
+          <span className={styles.issues} role="status">
+            {issueCount} layout {issueCount === 1 ? 'issue' : 'issues'}
+          </span>
+        ) : null}
         <Button variant="secondary" onClick={palette.open}>
           Command palette
         </Button>

@@ -20,6 +20,13 @@
   color: var(--color-fg-primary);
 }
 
+.issues {
+  margin-left: auto;
+  margin-right: var(--space-3);
+  font-size: var(--font-size-meta);
+  color: var(--color-fg-muted);
+}
+
 .workspace {
   flex: 1;
   min-height: 0;

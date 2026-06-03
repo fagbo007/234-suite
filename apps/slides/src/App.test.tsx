@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
 
@@ -13,5 +13,12 @@ describe('234 Slides app', () => {
     expect(screen.getByLabelText('Add slide')).toBeTruthy();
     expect(screen.getByLabelText('Slide canvas')).toBeTruthy();
     expect(screen.getByRole('button', { name: /command palette/i })).toBeTruthy();
+  });
+
+  it('exposes the "Tidy slide" auto-layout command in the palette', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: /command palette/i }));
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'tidy' } });
+    expect(screen.getByText('Tidy slide')).toBeTruthy();
   });
 });

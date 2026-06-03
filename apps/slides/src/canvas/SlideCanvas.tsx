@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { snapPosition } from '../model/layout';
 import { type Slide } from '../model/types';
 import styles from './SlideCanvas.module.css';
 
@@ -53,6 +54,33 @@ export function SlideCanvas({ slide }: SlideCanvasProps) {
           canvas.add(image);
         }
       }
+      // Smart snapping while dragging — snap the dragged object's edges/centre
+      // to the grid, the canvas centre, and other objects' edges/centres
+      // (browser-only; jsdom never reaches here as Fabric init is guarded above).
+      canvas.on('object:moving', (event) => {
+        const target = event.target;
+        if (!target || !canvas) return;
+        const others = canvas
+          .getObjects()
+          .filter((object) => object !== target)
+          .map((object) => ({
+            x: object.left ?? 0,
+            y: object.top ?? 0,
+            width: (object.width ?? 0) * (object.scaleX ?? 1),
+            height: (object.height ?? 0) * (object.scaleY ?? 1),
+          }));
+        const snapped = snapPosition(
+          {
+            x: target.left ?? 0,
+            y: target.top ?? 0,
+            width: (target.width ?? 0) * (target.scaleX ?? 1),
+            height: (target.height ?? 0) * (target.scaleY ?? 1),
+          },
+          others,
+        );
+        target.set({ left: snapped.x, top: snapped.y });
+      });
+
       canvas.renderAll();
     })();
 
