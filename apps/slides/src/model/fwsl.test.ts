@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { addObject, addSlide, createDeck } from './deck';
+import { addAnimation, createAnimation } from './animation';
+import { addObject, addSlide, createDeck, setSlideNotes, updateObject } from './deck';
 import { parseFwsl, serializeFwsl } from './fwsl';
 import { type SlideObject } from './types';
 
@@ -21,6 +22,21 @@ describe('.fwsl round-trip', () => {
     const json = serializeFwsl(deck);
     const restored = parseFwsl(json);
 
+    expect(restored).toEqual(deck);
+  });
+
+  it('round-trips animations and speaker notes', () => {
+    const base = createDeck();
+    const slideId = base.slides[0]!.id;
+    const obj: SlideObject = { id: 'r1', kind: 'rect', x: 0, y: 0, width: 100, height: 40, fill: 'black' };
+    let deck = addObject(base, slideId, obj);
+    deck = updateObject(deck, slideId, 'r1', (o) => addAnimation(o, createAnimation('entrance', 'fade', 300)));
+    deck = setSlideNotes(deck, slideId, 'Speak slowly');
+
+    const restored = parseFwsl(serializeFwsl(deck));
+
+    expect(restored.slides[0]?.notes).toBe('Speak slowly');
+    expect(restored.slides[0]?.objects[0]?.animations?.[0]?.effect).toBe('fade');
     expect(restored).toEqual(deck);
   });
 

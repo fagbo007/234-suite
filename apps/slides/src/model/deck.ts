@@ -48,6 +48,29 @@ export function addObject(deck: Deck, slideId: string, object: SlideObject): Dec
   };
 }
 
+/** Immutably replace one object on a slide via an updater (e.g. edit animations). */
+export function updateObject(
+  deck: Deck,
+  slideId: string,
+  objectId: string,
+  updater: (object: SlideObject) => SlideObject,
+): Deck {
+  return {
+    slides: deck.slides.map((slide) =>
+      slide.id === slideId
+        ? { ...slide, objects: slide.objects.map((o) => (o.id === objectId ? updater(o) : o)) }
+        : slide,
+    ),
+  };
+}
+
+/** Immutably set a slide's speaker notes. */
+export function setSlideNotes(deck: Deck, slideId: string, notes: string): Deck {
+  return {
+    slides: deck.slides.map((slide) => (slide.id === slideId ? { ...slide, notes } : slide)),
+  };
+}
+
 /** Snap every object on a slide to the spacing grid (auto-layout "tidy"). */
 export function tidySlide(deck: Deck, slideId: string): Deck {
   return {

@@ -6,13 +6,25 @@ import {
   useCommandPalette,
 } from '@234/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { AnimationPanel } from './anim/AnimationPanel';
 import styles from './App.module.css';
 import { SlideCanvas } from './canvas/SlideCanvas';
 import { PLACEHOLDER_IMAGE } from './model/assets';
 import { findViolations } from './model/constraints';
-import { addObject, addSlide, createDeck, deleteSlide, reorderSlide, tidySlide } from './model/deck';
+import {
+  addObject,
+  addSlide,
+  createDeck,
+  deleteSlide,
+  reorderSlide,
+  setSlideNotes,
+  tidySlide,
+  updateObject,
+} from './model/deck';
 import { type SlideObject } from './model/types';
+import { NotesPanel } from './notes/NotesPanel';
 import { SlidePanel } from './panel/SlidePanel';
+import { PresenterMode } from './presenter/PresenterMode';
 
 function makeText(): SlideObject {
   return { id: crypto.randomUUID(), kind: 'text', x: 80, y: 80, width: 320, height: 60, text: 'New text', fontSize: 28 };
@@ -28,6 +40,8 @@ export default function App() {
   const palette = useCommandPalette();
   const [deck, setDeck] = useState(() => createDeck());
   const [activeIndex, setActiveIndex] = useState(0);
+  const [showAnimations, setShowAnimations] = useState(false);
+  const [presenting, setPresenting] = useState(false);
 
   // Latest state for palette command closures (registered once on mount).
   const stateRef = useRef({ deck, activeIndex });
@@ -55,8 +69,20 @@ export default function App() {
       registerCommand({ id: 'slides.add-rect', title: 'Add rectangle', group: 'Insert', run: () => insert(makeRect) }),
       registerCommand({ id: 'slides.add-image', title: 'Add image', group: 'Insert', run: () => insert(makeImage) }),
       registerCommand({ id: 'slides.tidy', title: 'Tidy slide', group: 'Arrange', run: () => tidy() }),
+      registerCommand({
+        id: 'slides.animate',
+        title: 'Animate objects',
+        group: 'Animate',
+        run: () => setShowAnimations((value) => !value),
+      }),
+      registerCommand({
+        id: 'slides.present',
+        title: 'Start presentation',
+        group: 'View',
+        run: () => setPresenting(true),
+      }),
       registerCommand({ id: 'slides.toggle-theme', title: 'Toggle theme', group: 'View', run: () => toggleTheme() }),
-      registerCommand({ id: 'slides.about', title: 'About 234 Slides', group: 'Help', run: () => console.info('234 Slides — Phase 1') }),
+      registerCommand({ id: 'slides.about', title: 'About 234 Slides', group: 'Help', run: () => console.info('234 Slides — Phase 2') }),
     ];
     return () => {
       for (const remove of unregister) remove();
@@ -79,6 +105,19 @@ export default function App() {
   const activeSlide = deck.slides[activeIndex];
   const issueCount = activeSlide ? findViolations(activeSlide.objects).length : 0;
 
+  const handleNotesChange = (notes: string) => {
+    if (!activeSlide) return;
+    setDeck((current) => setSlideNotes(current, activeSlide.id, notes));
+  };
+  const handleUpdateObject = (objectId: string, updater: (object: SlideObject) => SlideObject) => {
+    if (!activeSlide) return;
+    setDeck((current) => updateObject(current, activeSlide.id, objectId, updater));
+  };
+
+  if (presenting) {
+    return <PresenterMode deck={deck} startIndex={activeIndex} onExit={() => setPresenting(false)} />;
+  }
+
   return (
     <div className={styles.app}>
       <header className={styles.header}>
@@ -88,6 +127,9 @@ export default function App() {
             {issueCount} layout {issueCount === 1 ? 'issue' : 'issues'}
           </span>
         ) : null}
+        <Button variant="secondary" onClick={() => setPresenting(true)}>
+          Present
+        </Button>
         <Button variant="secondary" onClick={palette.open}>
           Command palette
         </Button>
@@ -101,7 +143,11 @@ export default function App() {
           onDelete={handleDelete}
           onMove={handleMove}
         />
-        <SlideCanvas slide={activeSlide} />
+        <div className={styles.editor}>
+          <SlideCanvas slide={activeSlide} />
+          <NotesPanel notes={activeSlide?.notes ?? ''} onChange={handleNotesChange} />
+        </div>
+        {showAnimations ? <AnimationPanel slide={activeSlide} onUpdateObject={handleUpdateObject} /> : null}
       </div>
       <CommandPalette isOpen={palette.isOpen} onClose={palette.close} context={{ app: 'slides' }} />
     </div>

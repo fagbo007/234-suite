@@ -1,0 +1,104 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 280px;
+  padding: var(--space-4);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  color: var(--color-fg-primary);
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--font-size-emphasis);
+  font-weight: var(--font-weight-medium);
+}
+
+.empty {
+  margin: 0;
+  font-size: var(--font-size-meta);
+  color: var(--color-fg-muted);
+}
+
+.row {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.field {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.label {
+  font-size: var(--font-size-meta);
+  color: var(--color-fg-secondary);
+}
+
+.select,
+.number {
+  width: 100%;
+  box-sizing: border-box;
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--font-size-body);
+  color: var(--color-fg-primary);
+  background: var(--color-bg-base);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-interactive);
+}
+
+.select:focus-visible,
+.number:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 1px;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--font-size-meta);
+  background: var(--color-bg-base);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-interactive);
+}
+
+.itemText {
+  color: var(--color-fg-secondary);
+}
+
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-1);
+  color: var(--color-fg-muted);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-interactive);
+  cursor: pointer;
+}
+
+.iconButton:hover {
+  color: var(--color-danger);
+}
+
+.iconButton:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 1px;
+}

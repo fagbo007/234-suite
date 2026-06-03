@@ -1,0 +1,39 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+  background: var(--color-bg-base);
+}
+
+.stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notes {
+  max-width: 960px;
+  padding: var(--space-3);
+  font-size: var(--font-size-emphasis);
+  color: var(--color-fg-secondary);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.counter {
+  font-size: var(--font-size-body);
+  color: var(--color-fg-primary);
+}

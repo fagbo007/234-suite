@@ -21,4 +21,22 @@ describe('234 Slides app', () => {
     fireEvent.change(screen.getByRole('combobox'), { target: { value: 'tidy' } });
     expect(screen.getByText('Tidy slide')).toBeTruthy();
   });
+
+  it('shows the speaker notes editor for the active slide', () => {
+    render(<App />);
+    expect(screen.getByLabelText('Speaker notes')).toBeTruthy();
+  });
+
+  it('enters presenter mode from the Present button', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: /^present$/i }));
+    expect(screen.getByText(/slide 1 of 1/i)).toBeTruthy();
+  });
+
+  it('exposes the "Animate objects" command and opens the animation panel', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: /command palette/i }));
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'animate' } });
+    expect(screen.getByText('Animate objects')).toBeTruthy();
+  });
 });

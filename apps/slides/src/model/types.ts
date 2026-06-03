@@ -9,12 +9,28 @@
 
 export type SlideObjectKind = 'text' | 'rect' | 'image';
 
+/**
+ * Simplified v1 animation model — three categories only (entrance / emphasis /
+ * exit), per apps/slides/CLAUDE.md §5. The effect names per category live in
+ * model/animation.ts. Stored as plain data so it round-trips through `.fwsl`.
+ */
+export type AnimationCategory = 'entrance' | 'emphasis' | 'exit';
+
+export interface Animation {
+  id: string;
+  category: AnimationCategory;
+  effect: string;
+  durationMs: number;
+}
+
 interface BaseObject {
   id: string;
   x: number;
   y: number;
   width: number;
   height: number;
+  /** Optional per-object animations (entrance/emphasis/exit). */
+  animations?: Animation[];
 }
 
 export interface TextObject extends BaseObject {
@@ -39,6 +55,8 @@ export type SlideObject = TextObject | RectObject | ImageObject;
 export interface Slide {
   id: string;
   objects: SlideObject[];
+  /** Optional speaker notes shown in presenter mode. */
+  notes?: string;
 }
 
 export interface Deck {

@@ -1,0 +1,29 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.label {
+  font-size: var(--font-size-meta);
+  color: var(--color-fg-secondary);
+}
+
+.textarea {
+  width: 100%;
+  min-height: 72px;
+  box-sizing: border-box;
+  padding: var(--space-2);
+  font-family: inherit;
+  font-size: var(--font-size-body);
+  color: var(--color-fg-primary);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-interactive);
+  resize: vertical;
+}
+
+.textarea:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 1px;
+}

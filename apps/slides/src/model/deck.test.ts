@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { addObject, addSlide, createDeck, deleteSlide, reorderSlide, tidySlide } from './deck';
+import {
+  addObject,
+  addSlide,
+  createDeck,
+  deleteSlide,
+  reorderSlide,
+  setSlideNotes,
+  tidySlide,
+  updateObject,
+} from './deck';
 import { type SlideObject } from './types';
 
 const rect: SlideObject = { id: 'r1', kind: 'rect', x: 0, y: 0, width: 10, height: 10, fill: 'black' };
@@ -50,5 +59,21 @@ describe('deck CRUD', () => {
     const tidied = tidySlide(seeded, slideId);
     expect(tidied.slides[0]?.objects[0]?.x).toBe(16);
     expect(tidied.slides[0]?.objects[0]?.y).toBe(24);
+  });
+
+  it('updateObject replaces a single object immutably', () => {
+    const base = createDeck();
+    const slideId = base.slides[0]!.id;
+    const deck = addObject(base, slideId, rect);
+    const after = updateObject(deck, slideId, 'r1', (o) => ({ ...o, x: 99 }));
+    expect(after.slides[0]?.objects[0]?.x).toBe(99);
+    expect(deck.slides[0]?.objects[0]?.x).toBe(0); // original untouched
+  });
+
+  it('setSlideNotes sets speaker notes on the target slide', () => {
+    const deck = createDeck();
+    const slideId = deck.slides[0]!.id;
+    const after = setSlideNotes(deck, slideId, 'Remember to smile');
+    expect(after.slides[0]?.notes).toBe('Remember to smile');
   });
 });
