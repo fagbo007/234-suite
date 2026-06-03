@@ -6,7 +6,10 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   applyStyleToSelection,
   insertImage,
+  insertText,
+  replaceSelection,
   selectedImage,
+  selectedText,
   setImageAnchor,
   writerCommands,
 } from './commands';
@@ -69,6 +72,19 @@ describe('writerCommands', () => {
     view = mountHello();
     applyStyleToSelection(view, 'title');
     expect(view.state.doc.firstChild?.attrs.styleId).toBe('title');
+  });
+
+  it('reads the selected text and replaces it (AI rephrase path)', () => {
+    view = mountHello();
+    expect(selectedText(view.state)).toBe('hello');
+    replaceSelection(view, 'goodbye');
+    expect(view.state.doc.textContent).toBe('goodbye');
+  });
+
+  it('inserts text at the cursor (AI continue path)', () => {
+    view = mountHello();
+    insertText(view, ' more');
+    expect(view.state.doc.textContent).toContain('more');
   });
 
   it('inserts a block image and sets its anchor via the picker', () => {

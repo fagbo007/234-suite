@@ -1,4 +1,4 @@
-import { AiSidebar, useAiSidebar } from '@234/ai-sidebar';
+import { AiActionPanel, AiSettings, AiSidebar, useAiSettings, useAiSidebar } from '@234/ai-sidebar';
 import {
   Button,
   CommandPalette,
@@ -23,6 +23,7 @@ import { FindReplace } from './editor/FindReplace';
 import { ImagePanel } from './editor/ImagePanel';
 import { StyleEditor } from './editor/StyleEditor';
 import { defaultStyleRegistry, setActiveStyleRegistry, type StyleRegistry } from './editor/styles';
+import { writerActions } from './ai/writerActions';
 
 export default function App() {
   const palette = useCommandPalette();
@@ -32,6 +33,7 @@ export default function App() {
   const [stylesOpen, setStylesOpen] = useState(true);
   const [imageSel, setImageSel] = useState<SelectedImage | null>(null);
   const ai = useAiSidebar('writer');
+  const { settings: aiSettings, setSettings: setAiSettings, provider: aiProvider } = useAiSettings();
 
   const viewRef = useRef<EditorView | null>(null);
   viewRef.current = view;
@@ -123,7 +125,10 @@ export default function App() {
         ) : stylesOpen ? (
           <StyleEditor registry={registry} onChange={setRegistry} onApply={applyStyle} />
         ) : null}
-        <AiSidebar open={ai.isOpen} onClose={ai.close} app="writer" />
+        <AiSidebar open={ai.isOpen} onClose={ai.close} app="writer">
+          <AiSettings settings={aiSettings} onChange={setAiSettings} />
+          <AiActionPanel actions={writerActions(view)} provider={aiProvider} />
+        </AiSidebar>
       </div>
 
       <CommandPalette isOpen={palette.isOpen} onClose={palette.close} context={{ app: 'writer' }} />

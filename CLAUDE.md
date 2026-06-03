@@ -829,6 +829,21 @@ Format: `YYYY-MM-DD | Decision | Rationale | Alternatives considered`
              Delivers the runnable Tauri integration without a futile build on an
              un-tooled host; the window builds on an MSVC+Rust-equipped machine. |
              Alternatives: install rustup now (rejected — can't link without MSVC).
+
+2026-06-03 | Phase 3 AI sidebar is offline-first: an AiProvider interface in
+             /packages/ai-sidebar with a deterministic mockProvider (the default,
+             no network) + a local Ollama provider (no API key). Writer features
+             (rephrase/summarise/explain/continue) ship inside the docked,
+             user-invoked sidebar. Cloud providers (Claude/OpenAI) and §6 API-key
+             storage (OS keychain / encrypted file) are DEFERRED to the Tauri
+             window — until it exists, no cloud key path ships, so no key is ever
+             stored in plaintext (none is stored). |
+             The §6 key-storage requirement lives in the Rust/Tauri backend that
+             isn't built yet (MSVC absent — see 2026-06-02). Local Ollama needs no
+             key and works in the browser dev build now; AI stays optional and
+             docked. |
+             Alternatives: ship a browser-only cloud key store (rejected —
+             can't meet §6 secure-storage / no-plaintext rule without the backend).
 ```
 
 ---

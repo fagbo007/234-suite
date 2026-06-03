@@ -33,17 +33,30 @@ is mounted by all three apps. Decisions:
 - **AI is always optional.** Every app is 100% usable with the sidebar closed (its
   default). This is enforced by construction: no app feature depends on it.
 
-## Phase 3 plan (not built yet)
+## Phase 3 — features (in progress)
 
-- Per-app features inside the same docked panel: Writer (rephrase, continue,
-  summarise, explain selection); Sheet (natural language → formula, explain
-  formula, suggest chart); Slides (outline, layout suggestion, speaker notes).
-- Providers: **local Ollama** (offline) or an **opt-in** user-supplied
-  Claude/OpenAI API key. 234 never ships with a default API key.
-- API-key storage per root §6: OS keychain primary, AES-256 encrypted file
-  fallback. Keys never stored in plaintext; never transmitted anywhere except the
-  chosen provider's endpoint.
-- The four rule bullets above continue to hold in Phase 3 and beyond.
+**Provider engine + Writer features (part 1, implemented):**
+- `AiProvider` interface in `/packages/ai-sidebar/src/provider.ts`. Offline-first:
+  `mockProvider` (deterministic, no network, the **default**) and a **local
+  Ollama** provider (`createOllamaProvider`, no API key). `useAiSettings` persists
+  the provider choice (`localStorage`, default `mock`).
+- `AiActionPanel` (generic, user-invoked buttons → result with Insert/Copy/
+  Dismiss) + `AiSettings` (provider picker; **no API-key field**).
+- Writer actions (`apps/writer/src/ai/writerActions.ts`): rephrase, summarise,
+  explain (read-only), continue — all inside the docked sidebar, applied to the
+  document only on the user's "Insert".
+- Sheet (NL→formula, explain formula, suggest chart) and Slides (outline, layout,
+  speaker notes) follow in parts 2–3.
+
+**Deferred to the Tauri window (why):** cloud providers (Claude/OpenAI) and §6
+**API-key storage** (OS keychain primary, AES-256 encrypted-file fallback) live
+in the Rust/Tauri backend, which isn't built yet (no MSVC on this machine —
+CLAUDE.md §17). Until then 234 ships **no cloud key path at all** — so no key is
+ever stored in plaintext (none is stored). Local Ollama needs no key and works
+now. When the window lands, a Claude/OpenAI provider implements the same
+`AiProvider` interface and keys are stored per §6.
+
+The four rule bullets above continue to hold in Phase 3 and beyond.
 
 ## Overriding the rule
 

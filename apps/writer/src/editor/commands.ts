@@ -97,6 +97,27 @@ export function refreshStyledBlocks(view: EditorView): void {
   if (tr.steps.length > 0) view.dispatch(tr.setMeta('addToHistory', false));
 }
 
+// --- Selection helpers (Phase 3 AI) ---
+
+/** The plain text of the current selection (blocks joined by a space). */
+export function selectedText(state: EditorState): string {
+  const { from, to } = state.selection;
+  return state.doc.textBetween(from, to, ' ');
+}
+
+/** Replace the current selection with plain text (e.g. an AI rephrase result). */
+export function replaceSelection(view: EditorView, text: string): void {
+  view.dispatch(view.state.tr.insertText(text));
+  view.focus();
+}
+
+/** Insert plain text at the cursor / end of selection (e.g. AI continuation). */
+export function insertText(view: EditorView, text: string): void {
+  const { to } = view.state.selection;
+  view.dispatch(view.state.tr.insertText(text, to));
+  view.focus();
+}
+
 // --- Image block (Phase 2 part 2) ---
 
 export interface SelectedImage {

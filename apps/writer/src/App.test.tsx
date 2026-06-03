@@ -13,10 +13,14 @@ describe('234 Writer app', () => {
     expect(screen.getByRole('region', { name: 'Styles' })).toBeTruthy();
   });
 
-  it('keeps the AI sidebar closed by default and toggles it on invocation', () => {
+  it('keeps the AI sidebar closed by default and shows AI actions when opened', () => {
     render(<App />);
     expect(screen.queryByRole('complementary', { name: 'AI assistant' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'AI assistant' }));
     expect(screen.getByRole('complementary', { name: 'AI assistant' })).toBeTruthy();
+    // Offline by default (no network), and the Writer actions are present.
+    expect(screen.getByLabelText('AI provider')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /rephrase/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /continue writing/i })).toBeTruthy();
   });
 });

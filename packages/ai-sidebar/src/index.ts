@@ -9,3 +9,19 @@
 // 100% usable with AI disabled.
 export { AiSidebar, type AiSidebarProps } from './AiSidebar';
 export { useAiSidebar, type UseAiSidebar } from './useAiSidebar';
+export {
+  type AiProvider,
+  type AiRequest,
+  type OllamaConfig,
+  mockProvider,
+  createOllamaProvider,
+} from './provider';
+export {
+  useAiSettings,
+  DEFAULT_AI_SETTINGS,
+  type AiSettings as AiSettingsValue,
+  type ProviderId,
+  type UseAiSettings,
+} from './useAiSettings';
+export { AiActionPanel, type AiAction, type AiActionPanelProps } from './AiActionPanel';
+export { AiSettings, type AiSettingsProps } from './AiSettings';
