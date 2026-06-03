@@ -1,15 +1,24 @@
-import { Button } from '@234/shared';
-import { type ImportReport } from '@234/compat';
+import { Button } from '../Button';
 import styles from './ImportReportPanel.module.css';
 
+/**
+ * Structural shape of a compat ImportReport — kept local so @234/shared stays
+ * dependency-free (the @234/compat ImportReport is structurally compatible).
+ */
+export interface ImportReportLike {
+  ok: boolean;
+  losses: { feature: string; detail: string }[];
+}
+
 export interface ImportReportPanelProps {
-  report: ImportReport;
+  report: ImportReportLike;
   onClose: () => void;
 }
 
 /**
  * Surfaces an MS Office import's fidelity report (root §7): the import always
- * completes; anything simplified or dropped is listed here, never hidden.
+ * completes; anything simplified or dropped is listed here, never hidden. Shared
+ * across apps (Writer, Sheet, …) — never duplicated (root §4).
  */
 export function ImportReportPanel({ report, onClose }: ImportReportPanelProps) {
   return (

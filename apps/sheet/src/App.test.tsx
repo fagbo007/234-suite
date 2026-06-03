@@ -10,6 +10,12 @@ describe('234 Sheet app', () => {
     expect(screen.getByText('60')).toBeTruthy();
   });
 
+  it('offers .xlsx import/export', () => {
+    render(<App />);
+    expect(screen.getByRole('button', { name: 'Open .xlsx' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Export .xlsx' })).toBeTruthy();
+  });
+
   it('keeps the AI sidebar closed by default and shows Sheet AI actions when opened', () => {
     render(<App />);
     expect(screen.queryByRole('complementary', { name: 'AI assistant' })).toBeNull();

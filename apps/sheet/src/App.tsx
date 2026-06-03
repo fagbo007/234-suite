@@ -1,8 +1,10 @@
 import { AiActionPanel, AiSettings, AiSidebar, useAiSettings, useAiSidebar } from '@234/ai-sidebar';
+import { exportXlsx, importXlsx, type ImportReport } from '@234/compat';
 import { SheetEngine } from '@234/formula-engine';
 import {
   Button,
   CommandPalette,
+  ImportReportPanel,
   registerCommand,
   toggleTheme,
   useCommandPalette,
@@ -12,6 +14,7 @@ import styles from './App.module.css';
 import { type Chart, chartValues } from './charts/chart';
 import { ChartDialog } from './charts/ChartDialog';
 import { ChartView } from './charts/ChartView';
+import { applyCells } from './fwsh';
 import { ColumnInspector, type ColumnSchemaValue } from './grid/ColumnInspector';
 import { FormulaBar } from './grid/FormulaBar';
 import { Grid, type ColumnTypeMap, type NumericRule } from './grid/Grid';
@@ -42,10 +45,49 @@ export default function App() {
   const [validationRule, setValidationRule] = useState<NumericRule | null>(null);
   const ai = useAiSidebar('sheet');
   const { settings: aiSettings, setSettings: setAiSettings, provider: aiProvider } = useAiSettings();
+  const [importReport, setImportReport] = useState<ImportReport | null>(null);
   const bump = useCallback(() => setRevision((value) => value + 1), []);
 
   const activeRef = useRef(active);
   activeRef.current = active;
+
+  // Open an .xlsx → replace the sheet's cells (via @234/compat) + show the report.
+  const openXlsx = useCallback(() => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.xlsx';
+    input.onchange = () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      void file.arrayBuffer().then((buffer) => {
+        const { cells, report } = importXlsx(new Uint8Array(buffer));
+        engine.destroy();
+        applyCells(engine, cells);
+        setImportReport(report);
+        bump();
+      });
+    };
+    input.click();
+  }, [engine, bump]);
+
+  // Export the used range to a downloadable .xlsx.
+  const handleExportXlsx = useCallback(() => {
+    const { rows, cols } = engine.usedRange();
+    const cells: string[][] = Array.from({ length: rows }, (_, r) =>
+      Array.from({ length: cols }, (_, c) => engine.getRaw(r, c)),
+    );
+    const bytes = exportXlsx(cells);
+    const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+    const blob = new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'spreadsheet.xlsx';
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }, [engine]);
 
   const setColumnType = (col: number, schema: ColumnSchemaValue) => {
     setColumnTypes((prev) => ({ ...prev, [col]: schema }));
@@ -120,6 +162,8 @@ export default function App() {
         group: 'Data',
         run: () => setPanel('validation'),
       }),
+      registerCommand({ id: 'sheet.open-xlsx', title: 'Open .xlsx', group: 'File', run: openXlsx }),
+      registerCommand({ id: 'sheet.export-xlsx', title: 'Export .xlsx', group: 'File', run: handleExportXlsx }),
       registerCommand({
         id: 'sheet.ai',
         title: 'Toggle AI assistant',
@@ -142,13 +186,19 @@ export default function App() {
     return () => {
       for (const remove of unregister) remove();
     };
-  }, [engine, bump, ai]);
+  }, [engine, bump, ai, openXlsx, handleExportXlsx]);
 
   return (
     <div className={styles.app}>
       <header className={styles.header}>
         <h1 className={styles.title}>234 Sheet</h1>
         <div className={styles.actions}>
+          <Button variant="ghost" onClick={openXlsx}>
+            Open .xlsx
+          </Button>
+          <Button variant="ghost" onClick={handleExportXlsx}>
+            Export .xlsx
+          </Button>
           <Button variant="ghost" onClick={ai.toggle}>
             AI assistant
           </Button>
@@ -157,6 +207,9 @@ export default function App() {
           </Button>
         </div>
       </header>
+      {importReport ? (
+        <ImportReportPanel report={importReport} onClose={() => setImportReport(null)} />
+      ) : null}
       <div className={styles.formulaRow}>
         <NameBox engine={engine} active={active} onCommit={bump} />
         <FormulaBar engine={engine} active={active} onCommit={bump} />

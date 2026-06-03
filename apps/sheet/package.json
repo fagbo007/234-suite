@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@234/ai-sidebar": "workspace:*",
+    "@234/compat": "workspace:*",
     "@234/formula-engine": "workspace:*",
     "@234/shared": "workspace:*",
     "react": "^18.3.1",

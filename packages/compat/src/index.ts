@@ -5,6 +5,8 @@
 // (owner decision): fflate for ZIP, browser/jsdom DOMParser for reads. Part 1
 // ships `.docx` ↔ Writer; `.xlsx`/`.pptx` follow.
 export { importDocx, exportDocx, docxToBlocks, blocksToDocx } from './docx';
+export { importXlsx, exportXlsx, xlsxToCells, cellsToXlsx } from './xlsx';
+export { refToRowCol, rowColToRef } from './a1';
 export { type DocBlock, type TextRun, blocksToMarkdown, markdownToBlocks } from './blocks';
 export { type ImportReport, type FidelityLoss, createImportReport } from './report';
 export { unzip, zip, encodeText, decodeText } from './zip';

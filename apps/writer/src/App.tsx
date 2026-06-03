@@ -3,6 +3,7 @@ import { exportDocx, importDocx, type ImportReport } from '@234/compat';
 import {
   Button,
   CommandPalette,
+  ImportReportPanel,
   OFFICE_SHORTCUTS,
   registerCommand,
   toggleTheme,
@@ -26,7 +27,6 @@ import { ImagePanel } from './editor/ImagePanel';
 import { StyleEditor } from './editor/StyleEditor';
 import { defaultStyleRegistry, setActiveStyleRegistry, type StyleRegistry } from './editor/styles';
 import { writerActions } from './ai/writerActions';
-import { ImportReportPanel } from './compat/ImportReportPanel';
 
 export default function App() {
   const palette = useCommandPalette();
