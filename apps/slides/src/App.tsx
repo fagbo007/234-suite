@@ -1,4 +1,4 @@
-import { AiSidebar, useAiSidebar } from '@234/ai-sidebar';
+import { AiActionPanel, AiSettings, AiSidebar, useAiSettings, useAiSidebar } from '@234/ai-sidebar';
 import {
   Button,
   CommandPalette,
@@ -7,6 +7,7 @@ import {
   useCommandPalette,
 } from '@234/shared';
 import { type ChangeEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { slidesActions } from './ai/slidesActions';
 import { AnimationPanel } from './anim/AnimationPanel';
 import styles from './App.module.css';
 import { SlideCanvas } from './canvas/SlideCanvas';
@@ -36,6 +37,9 @@ function makeRect(): SlideObject {
 function makeImage(src: string): SlideObject {
   return { id: crypto.randomUUID(), kind: 'image', x: 120, y: 120, width: 320, height: 240, src };
 }
+function makeAiText(text: string): SlideObject {
+  return { id: crypto.randomUUID(), kind: 'text', x: 80, y: 80, width: 640, height: 360, text, fontSize: 20 };
+}
 
 export default function App() {
   const palette = useCommandPalette();
@@ -44,6 +48,7 @@ export default function App() {
   const [showAnimations, setShowAnimations] = useState(false);
   const [presenting, setPresenting] = useState(false);
   const ai = useAiSidebar('slides');
+  const { settings: aiSettings, setSettings: setAiSettings, provider: aiProvider } = useAiSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Latest state for palette command closures (registered once on mount).
@@ -131,6 +136,10 @@ export default function App() {
     if (!activeSlide) return;
     setDeck((current) => updateObject(current, activeSlide.id, objectId, updater));
   };
+  const handleAddText = (text: string) => {
+    if (!activeSlide) return;
+    setDeck((current) => addObject(current, activeSlide.id, makeAiText(text)));
+  };
 
   if (presenting) {
     return <PresenterMode deck={deck} startIndex={activeIndex} onExit={() => setPresenting(false)} />;
@@ -180,7 +189,17 @@ export default function App() {
           <NotesPanel notes={activeSlide?.notes ?? ''} onChange={handleNotesChange} />
         </div>
         {showAnimations ? <AnimationPanel slide={activeSlide} onUpdateObject={handleUpdateObject} /> : null}
-        <AiSidebar open={ai.isOpen} onClose={ai.close} app="slides" />
+        <AiSidebar open={ai.isOpen} onClose={ai.close} app="slides">
+          <AiSettings settings={aiSettings} onChange={setAiSettings} />
+          <AiActionPanel
+            actions={slidesActions({
+              slide: activeSlide,
+              onAddText: handleAddText,
+              onSetNotes: handleNotesChange,
+            })}
+            provider={aiProvider}
+          />
+        </AiSidebar>
       </div>
       <CommandPalette isOpen={palette.isOpen} onClose={palette.close} context={{ app: 'slides' }} />
     </div>

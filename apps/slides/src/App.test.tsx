@@ -46,10 +46,13 @@ describe('234 Slides app', () => {
     expect(screen.getByLabelText('Import image file')).toBeTruthy();
   });
 
-  it('keeps the AI sidebar closed by default and toggles it on invocation', () => {
+  it('keeps the AI sidebar closed by default and shows Slides AI actions when opened', () => {
     render(<App />);
     expect(screen.queryByRole('complementary', { name: 'AI assistant' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'AI assistant' }));
     expect(screen.getByRole('complementary', { name: 'AI assistant' })).toBeTruthy();
+    expect(screen.getByLabelText('AI provider')).toBeTruthy();
+    expect(screen.getByLabelText('Generate outline input')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /draft speaker notes/i })).toBeTruthy();
   });
 });
