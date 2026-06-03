@@ -10,6 +10,8 @@ describe('234 Writer app', () => {
     );
     expect(screen.getByRole('button', { name: /command palette/i })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Insert image' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Open .docx' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Export .docx' })).toBeTruthy();
     expect(screen.getByRole('region', { name: 'Styles' })).toBeTruthy();
   });
 

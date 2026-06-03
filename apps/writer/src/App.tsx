@@ -1,4 +1,5 @@
 import { AiActionPanel, AiSettings, AiSidebar, useAiSettings, useAiSidebar } from '@234/ai-sidebar';
+import { exportDocx, importDocx, type ImportReport } from '@234/compat';
 import {
   Button,
   CommandPalette,
@@ -18,12 +19,14 @@ import {
   selectedImage,
   type SelectedImage,
 } from './editor/commands';
+import { docToMarkdown, markdownToDoc } from './editor/fwtr';
 import { Editor } from './editor/Editor';
 import { FindReplace } from './editor/FindReplace';
 import { ImagePanel } from './editor/ImagePanel';
 import { StyleEditor } from './editor/StyleEditor';
 import { defaultStyleRegistry, setActiveStyleRegistry, type StyleRegistry } from './editor/styles';
 import { writerActions } from './ai/writerActions';
+import { ImportReportPanel } from './compat/ImportReportPanel';
 
 export default function App() {
   const palette = useCommandPalette();
@@ -32,6 +35,7 @@ export default function App() {
   const [findOpen, setFindOpen] = useState(false);
   const [stylesOpen, setStylesOpen] = useState(true);
   const [imageSel, setImageSel] = useState<SelectedImage | null>(null);
+  const [importReport, setImportReport] = useState<ImportReport | null>(null);
   const ai = useAiSidebar('writer');
   const { settings: aiSettings, setSettings: setAiSettings, provider: aiProvider } = useAiSettings();
 
@@ -64,6 +68,46 @@ export default function App() {
     input.click();
   }, []);
 
+  // Open a .docx → Markdown (via @234/compat) → replace the editor doc + report.
+  const openDocx = useCallback(() => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.docx';
+    input.onchange = () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      void file.arrayBuffer().then((buffer) => {
+        const { markdown, report } = importDocx(new Uint8Array(buffer));
+        const current = viewRef.current;
+        if (current) {
+          const doc = markdownToDoc(markdown);
+          current.dispatch(current.state.tr.replaceWith(0, current.state.doc.content.size, doc.content));
+          current.focus();
+        }
+        setImportReport(report);
+      });
+    };
+    input.click();
+  }, []);
+
+  // Export the current document to a downloadable .docx.
+  const handleExportDocx = useCallback(() => {
+    const current = viewRef.current;
+    if (!current) return;
+    const bytes = exportDocx(docToMarkdown(current.state.doc));
+    // Copy into a concrete ArrayBuffer (Uint8Array is generic over ArrayBufferLike).
+    const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+    const blob = new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'document.docx';
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }, []);
+
   useEffect(() => {
     setActiveStyleRegistry(registry);
     if (view) refreshStyledBlocks(view);
@@ -77,6 +121,8 @@ export default function App() {
     const unregister = [
       registerCommand({ id: 'writer.find', title: 'Find and replace', group: 'Edit', run: () => setFindOpen(true) }),
       registerCommand({ id: 'writer.insert-image', title: 'Insert image', group: 'Insert', run: pickImage }),
+      registerCommand({ id: 'writer.open-docx', title: 'Open .docx', group: 'File', run: openDocx }),
+      registerCommand({ id: 'writer.export-docx', title: 'Export .docx', group: 'File', run: handleExportDocx }),
       registerCommand({ id: 'writer.edit-styles', title: 'Edit styles', group: 'Format', run: () => setStylesOpen(true) }),
       registerCommand({ id: 'writer.ai', title: 'Toggle AI assistant', group: 'AI', run: () => ai.toggle() }),
       registerCommand({ id: 'writer.toggle-theme', title: 'Toggle theme', group: 'View', run: () => toggleTheme() }),
@@ -85,7 +131,7 @@ export default function App() {
     return () => {
       for (const remove of unregister) remove();
     };
-  }, [pickImage, ai]);
+  }, [pickImage, openDocx, handleExportDocx, ai]);
 
   const applyStyle = (styleId: string) => {
     if (view) applyStyleToSelection(view, styleId);
@@ -105,6 +151,12 @@ export default function App() {
           <Button variant="ghost" onClick={pickImage}>
             Insert image
           </Button>
+          <Button variant="ghost" onClick={openDocx}>
+            Open .docx
+          </Button>
+          <Button variant="ghost" onClick={handleExportDocx}>
+            Export .docx
+          </Button>
           <Button variant="ghost" onClick={ai.toggle}>
             AI assistant
           </Button>
@@ -115,6 +167,10 @@ export default function App() {
       </header>
 
       {findOpen ? <FindReplace view={view} open={findOpen} onClose={() => setFindOpen(false)} /> : null}
+
+      {importReport ? (
+        <ImportReportPanel report={importReport} onClose={() => setImportReport(null)} />
+      ) : null}
 
       <div className={styles.workspace}>
         <div className={styles.editorArea}>

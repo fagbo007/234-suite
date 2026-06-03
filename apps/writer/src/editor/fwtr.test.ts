@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseFwtr, serializeFwtr } from './fwtr';
+import { docToMarkdown, markdownToDoc, parseFwtr, serializeFwtr } from './fwtr';
 import { headingNode, imageNode, schema } from './schema';
 
 const SAMPLE = `---
@@ -49,6 +49,14 @@ describe('.fwtr round-trip', () => {
     const parsed = parseFwtr(text);
     expect(parsed.doc.firstChild?.attrs.styleId).toBe('title');
     expect(parsed.doc.child(1).attrs.styleId ?? null).toBeNull();
+  });
+
+  it('bridges Markdown ↔ doc for MS Office compat (text blocks only)', () => {
+    const md = '# Title\n\nA paragraph with **bold** text.';
+    const doc = markdownToDoc(md);
+    expect(doc.firstChild?.type).toBe(headingNode);
+    // docToMarkdown drops images and round-trips the supported text subset.
+    expect(docToMarkdown(doc)).toBe(md);
   });
 
   it('round-trips a block image via front matter (body stays prose)', () => {

@@ -5,5 +5,9 @@
     "rootDir": "."
   },
   "include": ["src", "css.d.ts", "vite.config.ts"],
-  "references": [{ "path": "../shared" }, { "path": "../../packages/ai-sidebar" }]
+  "references": [
+    { "path": "../shared" },
+    { "path": "../../packages/ai-sidebar" },
+    { "path": "../../packages/compat" }
+  ]
 }

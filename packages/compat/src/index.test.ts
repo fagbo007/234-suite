@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { COMPAT_PLACEHOLDER } from './index';
+import { exportDocx, importDocx } from './index';
 
 describe('@234/compat', () => {
-  it('exposes a placeholder until the compat layer lands in Phase 3', () => {
-    expect(COMPAT_PLACEHOLDER).toBe(true);
+  it('exposes a working .docx round-trip', () => {
+    const { markdown, report } = importDocx(exportDocx('# Hi\n\nbody'));
+    expect(markdown).toBe('# Hi\n\nbody');
+    expect(report.ok).toBe(true);
   });
 });

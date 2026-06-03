@@ -126,6 +126,24 @@ export function serializeFwtr(input: {
   return `---\n${front}\n---\n\n${body}\n`;
 }
 
+/**
+ * Markdown → ProseMirror doc (the supported subset), for MS Office import via
+ * @234/compat. Reuses the same parser as `.fwtr`.
+ */
+export function markdownToDoc(markdown: string): PMNode {
+  return parser.parse(markdown.trimStart());
+}
+
+/**
+ * ProseMirror doc → Markdown body (text blocks only; images dropped), for MS
+ * Office export via @234/compat.
+ */
+export function docToMarkdown(doc: PMNode): string {
+  const { textBlocks } = splitBlocks(doc);
+  const textDoc = schema.topNodeType.create(null, Fragment.fromArray(textBlocks));
+  return defaultMarkdownSerializer.serialize(textDoc);
+}
+
 /** Parse `.fwtr` text back into a document, style registry, and title. */
 export function parseFwtr(text: string): FwtrDocument {
   let title = 'Untitled document';
