@@ -7,6 +7,17 @@
 export { applyTheme, getTheme, toggleTheme, type ThemeName } from '../design-tokens';
 
 export {
+  MOD,
+  OFFICE_SHORTCUTS,
+  matchShortcut,
+  parseShortcut,
+  toProseMirrorKey,
+  useShortcuts,
+  type ParsedShortcut,
+  type ShortcutBindings,
+} from './shortcuts';
+
+export {
   Button,
   type ButtonProps,
   type ButtonVariant,

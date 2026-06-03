@@ -2,9 +2,11 @@ import { AiSidebar, useAiSidebar } from '@234/ai-sidebar';
 import {
   Button,
   CommandPalette,
+  OFFICE_SHORTCUTS,
   registerCommand,
   toggleTheme,
   useCommandPalette,
+  useShortcuts,
 } from '@234/shared';
 import { type EditorView } from 'prosemirror-view';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -65,16 +67,9 @@ export default function App() {
     if (view) refreshStyledBlocks(view);
   }, [registry, view]);
 
-  useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'f') {
-        event.preventDefault();
-        setFindOpen(true);
-      }
-    }
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, []);
+  // MS Office shortcut compat (root §9): Ctrl/Cmd+F opens find. Bold/italic/undo/
+  // redo are bound in the editor keymap from the same OFFICE_SHORTCUTS catalog.
+  useShortcuts({ [OFFICE_SHORTCUTS.find]: () => setFindOpen(true) });
 
   useEffect(() => {
     const unregister = [
