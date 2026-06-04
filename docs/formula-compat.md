@@ -15,23 +15,27 @@
 - **Planned (Phase 2+)** — not yet implemented; the evaluator returns `#NAME?`
   (unknown function) and the UI shows a clear "not supported yet" message.
 
-## Phase 1 supported set
+## Supported set
 
 | Feature | Status | Notes |
 |---|---|---|
 | Arithmetic `+ - * / ^`, parens, unary minus | Supported | Core Phase 1 |
-| `SUM` | Supported | Ranges + arguments |
-| `AVERAGE` | Supported | Ignores empty cells |
-| `COUNT` | Supported | Counts numeric values |
+| Comparisons `= <> < <= > >=` | Supported | Booleans are numeric — TRUE = 1, FALSE = 0 |
+| `SUM`, `AVERAGE`, `COUNT` | Supported | Ranges + arguments; AVERAGE ignores empty cells |
+| `MIN`, `MAX` | Supported | Over ranges/arguments; empty → 0 |
+| `IF` | Supported | `IF(cond, then[, else])` — **lazy** branches (untaken branch not evaluated) |
+| `AND`, `OR`, `NOT` | Supported | Nonzero is true; return 1/0 |
+| `ABS`, `INT`, `SQRT`, `POWER`, `MOD`, `ROUND` | Supported | Scalar math; `ROUND(x, digits=0)`; `MOD`/`SQRT` error on invalid input |
 | Cell / range references | Supported | Stored as named refs / coordinates; A1 display-only (see `formula-refs.md`) |
-| Error codes | Supported | `#DIV/0!`, `#NAME?` (unknown fn), `#CYCLE!`, `#VALUE!`, `#ERROR!` |
+| Error codes | Supported | `#DIV/0!`, `#NAME?` (unknown fn), `#NUM!`, `#CYCLE!`, `#VALUE!`, `#ERROR!` |
+
+Performance: evaluating 10,000 formula cells is gated under 500ms (root §8).
 
 ## Planned functions (Phase 2+)
 
 | Function group | 234 Sheet phase |
 |---|---|
 | `SUMIF`, `COUNTIF`, `AVERAGEIF` | Phase 2+ |
-| `IF`, `AND`, `OR`, `NOT` | Phase 2+ |
 | `VLOOKUP`, `HLOOKUP`, `INDEX`, `MATCH`, `XLOOKUP` | Phase 2+ |
 | `CONCATENATE`, `CONCAT`, `TEXTJOIN` | Phase 2+ |
 | `DATE`, `TODAY`, `NOW`, `DATEDIF` | Phase 2+ (with explicit date columns — no coercion, §2.2) |

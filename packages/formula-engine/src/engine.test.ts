@@ -94,6 +94,19 @@ describe('SheetEngine', () => {
     expect(links[0]?.refs).toContain('[Book.xlsx]Sheet1!A1');
   });
 
+  it('evaluates comparisons and IF over cell references', () => {
+    engine = new SheetEngine();
+    engine.setCell(0, 0, '8'); // A1
+    engine.setCell(1, 0, '3'); // A2
+    engine.setCell(0, 1, '=IF(A1>A2, A1, A2)'); // larger of the two
+    engine.setCell(1, 1, '=A1>=A2'); // numeric boolean
+    engine.setCell(2, 1, '=IF(A2=0, 0, A1/A2)'); // lazy: no #DIV/0! when A2≠0
+
+    expect(engine.getValue(0, 1)).toBe(8);
+    expect(engine.getValue(1, 1)).toBe(1);
+    expect(engine.getValue(2, 1)).toBeCloseTo(8 / 3);
+  });
+
   it('reads a range and a single named reference', () => {
     engine = new SheetEngine();
     engine.setCell(0, 0, '10');
