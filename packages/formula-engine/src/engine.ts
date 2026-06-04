@@ -21,7 +21,8 @@ export interface NamedCell {
 
 export type CellValue = string | number | boolean | null;
 
-const ERROR_CODE = /^#.*[!?]$/;
+// Excel error codes end in `!`/`?`, plus `#N/A` (which ends in a letter).
+const ERROR_CODE = /^#(N\/A|.+[!?])$/;
 const SHEET = 0;
 
 /**

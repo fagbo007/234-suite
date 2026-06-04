@@ -135,6 +135,41 @@ describe('SheetEngine', () => {
     expect(engine.getValue(4, 2)).toBe(20);
   });
 
+  it('looks up values with VLOOKUP / INDEX / MATCH (exact + approximate)', () => {
+    engine = new SheetEngine();
+    // A1:C3 — labels, numbers, text; D1:E3 — sorted numeric keys.
+    const rows = [
+      ['apple', '10', 'x'],
+      ['banana', '20', 'y'],
+      ['cherry', '30', 'z'],
+    ];
+    rows.forEach((row, r) => row.forEach((v, c) => engine!.setCell(r, c, v)));
+    [1, 5, 10].forEach((v, r) => engine!.setCell(r, 3, String(v))); // D1:D3
+    ['a', 'b', 'c'].forEach((v, r) => engine!.setCell(r, 4, v)); // E1:E3
+
+    engine.setCell(0, 5, '=VLOOKUP("banana", A1:C3, 2)'); // → 20
+    engine.setCell(1, 5, '=VLOOKUP("banana", A1:C3, 3)'); // → "y"
+    engine.setCell(2, 5, '=VLOOKUP("missing", A1:C3, 2)'); // → #N/A
+    engine.setCell(3, 5, '=VLOOKUP("apple", A1:C3, 4)'); // → #REF!
+    engine.setCell(4, 5, '=VLOOKUP(7, D1:E3, 2, 1)'); // approx: D2=5 → "b"
+    engine.setCell(5, 5, '=MATCH("cherry", A1:A3, 0)'); // → 3
+    engine.setCell(6, 5, '=MATCH(7, D1:D3, 1)'); // approx ascending → 2
+    engine.setCell(7, 5, '=INDEX(A1:C3, 2, 3)'); // → "y"
+    engine.setCell(8, 5, '=INDEX(A1:A3, 2)'); // single column → "banana"
+    engine.setCell(9, 5, '=INDEX(A1:C3, 5, 1)'); // → #REF!
+
+    expect(engine.getValue(0, 5)).toBe(20);
+    expect(engine.getValue(1, 5)).toBe('y');
+    expect(engine.getValue(2, 5)).toBe('#N/A');
+    expect(engine.getValue(3, 5)).toBe('#REF!');
+    expect(engine.getValue(4, 5)).toBe('b');
+    expect(engine.getValue(5, 5)).toBe(3);
+    expect(engine.getValue(6, 5)).toBe(2);
+    expect(engine.getValue(7, 5)).toBe('y');
+    expect(engine.getValue(8, 5)).toBe('banana');
+    expect(engine.getValue(9, 5)).toBe('#REF!');
+  });
+
   it('handles text cells: concatenation, SUM ignores text, string results', () => {
     engine = new SheetEngine();
     engine.setCell(0, 0, 'hello'); // A1 (text)

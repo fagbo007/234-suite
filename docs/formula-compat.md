@@ -30,8 +30,9 @@
 | Text: string literals, `&` concat, comparisons | Supported | Values are `number \| string`; string comparisons are case-insensitive; mixed types rank number < text |
 | `CONCAT`, `CONCATENATE`, `LEN`, `UPPER`, `LOWER`, `TRIM`, `LEFT`, `RIGHT` | Supported | Text functions |
 | `DATE`, `DATEVALUE`, `YEAR`, `MONTH`, `DAY`, `DATEDIF` | Supported | Dates are serial day-counts since 1970-01-01; `DATEVALUE` parses ISO `YYYY-MM-DD`; `DATEDIF` unit `"d"`/`"m"`/`"y"`. No auto-coercion — `DATEVALUE` is explicit (§2.2) |
+| `VLOOKUP`, `INDEX`, `MATCH` | Supported | **Default exact match** (Excel defaults to approximate); approximate via the optional last arg (sorted data). 1-based indices; `#N/A` / `#REF!` on miss / bad index |
 | Cell / range references | Supported | Stored as named refs / coordinates; A1 display-only (see `formula-refs.md`) |
-| Error codes | Supported | `#DIV/0!`, `#NAME?` (unknown fn), `#NUM!`, `#CYCLE!`, `#VALUE!`, `#ERROR!` |
+| Error codes | Supported | `#DIV/0!`, `#NAME?` (unknown fn), `#NUM!`, `#CYCLE!`, `#VALUE!`, `#N/A`, `#REF!`, `#ERROR!` |
 
 Performance: evaluating 10,000 formula cells is gated under 500ms (root §8).
 
@@ -39,7 +40,7 @@ Performance: evaluating 10,000 formula cells is gated under 500ms (root §8).
 
 | Function group | 234 Sheet phase |
 |---|---|
-| `VLOOKUP`, `HLOOKUP`, `INDEX`, `MATCH`, `XLOOKUP` | Phase 2+ |
+| `HLOOKUP`, `XLOOKUP` | Phase 2+ (VLOOKUP/INDEX/MATCH supported) |
 | `TEXTJOIN`, `MID`, `SUBSTITUTE`, `FIND` | Phase 2+ |
 | `TODAY`, `NOW` | Phase 2+ (need an injected clock to stay deterministic/testable) |
 | `EDATE`, `EOMONTH`, `WEEKDAY`, `NETWORKDAYS` | Phase 2+ |

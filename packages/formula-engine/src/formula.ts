@@ -11,8 +11,9 @@ import { a1ToCell } from './a1';
  *    AND / OR / NOT, ABS / INT / SQRT / POWER / MOD / ROUND,
  *    COUNTIF / SUMIF / AVERAGEIF, text: CONCAT / CONCATENATE / LEN / UPPER /
  *    LOWER / TRIM / LEFT / RIGHT, and dates: DATE / DATEVALUE / YEAR / MONTH /
- *    DAY / DATEDIF (serial day-counts since 1970-01-01; TODAY/NOW need a clock)
- * Further breadth (lookups, arrays) stays planned — see
+ *    DAY / DATEDIF (serial day-counts since 1970-01-01; TODAY/NOW need a clock),
+ *    and lookups: VLOOKUP / INDEX / MATCH (exact match by default)
+ * Further breadth (HLOOKUP/XLOOKUP, arrays) stays planned — see
  * docs/formula-compat.md; unknown functions return `#NAME?` (never guessed).
  *
  * Errors are thrown as `Error` whose message is an Excel-style code
@@ -464,6 +465,9 @@ class Parser {
     if (name === 'COUNTIF' || name === 'SUMIF' || name === 'AVERAGEIF') {
       return this.conditionalAggregate(name);
     }
+    if (name === 'VLOOKUP') return this.vlookup();
+    if (name === 'INDEX') return this.indexFn();
+    if (name === 'MATCH') return this.matchFn();
     const values: (FormulaValue | null)[] = [];
     if (this.peek()?.type !== 'rparen') {
       do {
@@ -593,6 +597,124 @@ class Parser {
       this.next();
     }
     return { op, threshold: this.expression() };
+  }
+
+  /** Read one argument as a 2D rect (rows × cols); a single cell/scalar → 1×1. */
+  private rangeRect(): (FormulaValue | null)[][] {
+    const token = this.peek();
+    if (token?.type === 'ident' && this.at(1)?.type === 'colon' && this.at(2)?.type === 'ident') {
+      const startToken = this.next() as Token & { value: string };
+      this.next(); // colon
+      const endToken = this.next() as Token & { value: string };
+      const [r0c0, r1c1] = [this.coord(startToken.value), this.coord(endToken.value)];
+      const rect: (FormulaValue | null)[][] = [];
+      for (let r = Math.min(r0c0[0], r1c1[0]); r <= Math.max(r0c0[0], r1c1[0]); r++) {
+        const row: (FormulaValue | null)[] = [];
+        for (let c = Math.min(r0c0[1], r1c1[1]); c <= Math.max(r0c0[1], r1c1[1]); c++) {
+          row.push(this.resolve(r, c));
+        }
+        rect.push(row);
+      }
+      return rect;
+    }
+    return [[this.comparison()]];
+  }
+
+  /**
+   * MATCH(lookup, range, [type]). type 0 = exact (default — Excel uses 1); 1 =
+   * largest value ≤ lookup (ascending); -1 = smallest ≥ lookup (descending).
+   * Returns the 1-based position; no match → #N/A.
+   */
+  private matchFn(): FormulaValue {
+    const lookup = this.comparison();
+    this.expectComma();
+    const flat = this.rangeRect().flat();
+    let type = 0;
+    if (this.peek()?.type === 'comma') {
+      this.next();
+      type = toNumber(this.comparison());
+    }
+    this.expectRparen();
+
+    if (type === 0) {
+      const idx = flat.findIndex((v) => v !== null && compareValues(v, '=', lookup));
+      if (idx === -1) throw new Error('#N/A');
+      return idx + 1;
+    }
+    // Approximate: ascending (type>0) keeps the last value ≤ lookup; descending
+    // (type<0) keeps the last value ≥ lookup.
+    const op = type > 0 ? '<=' : '>=';
+    let best = -1;
+    flat.forEach((v, i) => {
+      if (v !== null && compareValues(v, op, lookup)) best = i;
+    });
+    if (best === -1) throw new Error('#N/A');
+    return best + 1;
+  }
+
+  /**
+   * VLOOKUP(lookup, table, colIndex, [approx]). Searches the table's first
+   * column; approx 0 = exact (default — Excel uses TRUE), nonzero = approximate
+   * (ascending). Returns the matched row's colIndex (1-based) cell.
+   */
+  private vlookup(): FormulaValue {
+    const lookup = this.comparison();
+    this.expectComma();
+    const table = this.rangeRect();
+    this.expectComma();
+    const colIndex = Math.trunc(toNumber(this.comparison()));
+    let approx = 0;
+    if (this.peek()?.type === 'comma') {
+      this.next();
+      approx = toNumber(this.comparison());
+    }
+    this.expectRparen();
+
+    let matchRow = -1;
+    if (approx === 0) {
+      matchRow = table.findIndex((row) => row[0] != null && compareValues(row[0], '=', lookup));
+    } else {
+      table.forEach((row, i) => {
+        if (row[0] != null && compareValues(row[0], '<=', lookup)) matchRow = i;
+      });
+    }
+    if (matchRow === -1) throw new Error('#N/A');
+    const row = table[matchRow]!;
+    if (colIndex < 1 || colIndex > row.length) throw new Error('#REF!');
+    return row[colIndex - 1] ?? 0;
+  }
+
+  /** INDEX(range, rowNum, [colNum]) — 1-based; out of range → #REF!. */
+  private indexFn(): FormulaValue {
+    const rect = this.rangeRect();
+    this.expectComma();
+    const rowNum = Math.trunc(toNumber(this.comparison()));
+    let colNum = 0;
+    if (this.peek()?.type === 'comma') {
+      this.next();
+      colNum = Math.trunc(toNumber(this.comparison()));
+    }
+    this.expectRparen();
+
+    const rows = rect.length;
+    const cols = rect[0]?.length ?? 0;
+    // A single row/column lets the lone index address it directly.
+    let r = rowNum;
+    let c = colNum;
+    if (colNum === 0) {
+      if (cols === 1) c = 1;
+      else if (rows === 1) {
+        c = rowNum;
+        r = 1;
+      } else c = 1;
+    }
+    if (r < 1 || r > rows || c < 1 || c > cols) throw new Error('#REF!');
+    return rect[r - 1]![c - 1] ?? 0;
+  }
+
+  private expectRparen(): void {
+    if (this.peek()?.type !== 'rparen') throw new Error('#ERROR!');
+    this.next();
   }
 
   private coord(ref: string): [number, number] {
