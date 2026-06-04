@@ -3,6 +3,8 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   plugins: [react()],
+  // Fixed port so the Tauri devUrl (src-tauri/tauri.conf.json) reliably matches.
+  server: { port: 5174, strictPort: true },
   test: {
     globals: true,
     environment: 'jsdom',
