@@ -64,7 +64,7 @@ If `corepack enable` cannot write the global shim (e.g. Node installed under
 - [Code of conduct](./CODE_OF_CONDUCT.md)
 - [Changelog](./CHANGELOG.md)
 - [Plugin / extension API sketch](./docs/architecture/plugin-api.md)
-- [Architecture decision records](./docs/architecture/) — app shell, formula refs, AI sidebar, accessibility, plugin API
+- [Architecture decision records](./docs/architecture/) — app shell, formula refs, AI sidebar, accessibility, plugin API, collaboration
 - [`CLAUDE.md`](./CLAUDE.md) — the single source of truth for architecture and rules
 
 ## License
