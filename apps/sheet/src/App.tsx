@@ -17,11 +17,11 @@ import { ChartView } from './charts/ChartView';
 import { applyCells } from './fwsh';
 import { ColumnInspector, type ColumnSchemaValue } from './grid/ColumnInspector';
 import { FormulaBar } from './grid/FormulaBar';
-import { Grid, type ColumnTypeMap, type NumericRule } from './grid/Grid';
+import { Grid, type ColumnTypeMap } from './grid/Grid';
 import { NameBox } from './grid/NameBox';
 import { sheetActions } from './ai/sheetActions';
 import { LinkAuditor } from './inspector/LinkAuditor';
-import { RuleDialog, type RuleDraft } from './inspector/RuleDialog';
+import { RuleDialog } from './inspector/RuleDialog';
 
 type Panel = 'none' | 'column' | 'links' | 'chart' | 'conditional' | 'validation';
 
@@ -41,8 +41,8 @@ export default function App() {
   const [columnTypes, setColumnTypes] = useState<ColumnTypeMap>({});
   const [panel, setPanel] = useState<Panel>('none');
   const [chart, setChart] = useState<Chart | null>(null);
-  const [conditionalRule, setConditionalRule] = useState<NumericRule | null>(null);
-  const [validationRule, setValidationRule] = useState<NumericRule | null>(null);
+  const [conditionalRule, setConditionalRule] = useState<string | null>(null);
+  const [validationRule, setValidationRule] = useState<string | null>(null);
   const ai = useAiSidebar('sheet');
   const { settings: aiSettings, setSettings: setAiSettings, provider: aiProvider } = useAiSettings();
   const [importReport, setImportReport] = useState<ImportReport | null>(null);
@@ -93,21 +93,9 @@ export default function App() {
     setColumnTypes((prev) => ({ ...prev, [col]: schema }));
   };
 
-  // Resolve a rule threshold: a number, or a single named/A1 ref via the engine.
-  const resolveThreshold = (expr: string): number | null => {
-    const direct = Number(expr);
-    if (expr.trim() !== '' && Number.isFinite(direct)) return direct;
-    try {
-      const value = engine.readRange(expr)[0];
-      return typeof value === 'number' ? value : null;
-    } catch {
-      return null;
-    }
-  };
-
-  const applyRule = (draft: RuleDraft, set: (rule: NumericRule | null) => void) => {
-    const threshold = resolveThreshold(draft.threshold);
-    set(threshold === null ? null : { op: draft.op, threshold });
+  // A rule is a formula predicate (uses `value`); blank clears it.
+  const applyRule = (predicate: string, set: (rule: string | null) => void) => {
+    set(predicate.trim() === '' ? null : predicate);
     setPanel('none');
   };
 

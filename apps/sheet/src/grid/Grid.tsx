@@ -2,7 +2,7 @@ import { colToLabel, type SheetEngine } from '@234/formula-engine';
 import { useMemo, useState } from 'react';
 import { displayDate, type DateFormat } from '../dates';
 import { type ColumnType } from '../fwsh';
-import { compare, type ComparisonOp } from '../rules';
+import { matchesPredicate } from '../rules';
 import { DEFAULT_DIMENSIONS, getVisibleRange, materializeRows, totalHeight } from './model';
 import styles from './Grid.module.css';
 
@@ -12,10 +12,6 @@ const dims = DEFAULT_DIMENSIONS;
 const contentWidth = GUTTER_WIDTH + dims.cols * dims.colWidth;
 
 export type ColumnTypeMap = Record<number, { type: ColumnType; dateFormat?: DateFormat }>;
-export interface NumericRule {
-  op: ComparisonOp;
-  threshold: number;
-}
 
 export interface GridProps {
   engine: SheetEngine;
@@ -24,8 +20,10 @@ export interface GridProps {
   /** Bumping this re-reads cell values after edits/recalculation. */
   revision: number;
   columnTypes?: ColumnTypeMap;
-  conditionalRule?: NumericRule | null;
-  validationRule?: NumericRule | null;
+  /** Formula predicate (uses `value`); highlight cells where it matches. */
+  conditionalRule?: string | null;
+  /** Formula predicate; flag cells where it does NOT match. */
+  validationRule?: string | null;
 }
 
 export function Grid({
@@ -48,15 +46,16 @@ export function Grid({
     return value;
   };
 
-  // Conditional formatting + data validation classes for a numeric cell.
+  // Conditional formatting + data validation classes for a numeric cell. Rules
+  // are formula predicates using `value`, evaluated per visible cell.
   const ruleClasses = (value: string): string[] => {
     const num = Number(value);
     if (value.trim() === '' || !Number.isFinite(num)) return [];
     const classes: string[] = [];
-    if (conditionalRule && compare(num, conditionalRule.op, conditionalRule.threshold)) {
+    if (conditionalRule && matchesPredicate(engine, conditionalRule, num)) {
       classes.push(styles.highlight!);
     }
-    if (validationRule && !compare(num, validationRule.op, validationRule.threshold)) {
+    if (validationRule && !matchesPredicate(engine, validationRule, num)) {
       classes.push(styles.invalid!);
     }
     return classes;

@@ -11,17 +11,17 @@ afterEach(() => {
 });
 
 describe('RuleDialog', () => {
-  it('applies an operator + threshold rule', () => {
+  it('applies a formula predicate (autocomplete input present)', () => {
     engine = new SheetEngine();
     const onApply = vi.fn();
     render(
       <RuleDialog engine={engine} title="Conditional formatting" onApply={onApply} onClose={vi.fn()} />,
     );
 
-    fireEvent.change(screen.getByLabelText('Operator'), { target: { value: '>=' } });
-    fireEvent.change(screen.getByLabelText('Threshold'), { target: { value: '100' } });
+    const input = screen.getByLabelText('Predicate formula');
+    fireEvent.change(input, { target: { value: 'value > 10' } });
     fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
 
-    expect(onApply).toHaveBeenCalledWith({ op: '>=', threshold: '100' });
+    expect(onApply).toHaveBeenCalledWith('value > 10');
   });
 });

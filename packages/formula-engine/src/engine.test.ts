@@ -116,4 +116,14 @@ describe('SheetEngine', () => {
     engine.defineName('top', 0, 0);
     expect(engine.readRange('top')).toEqual([10]);
   });
+
+  it('evaluates ad-hoc expressions via evaluate() (for rule predicates)', () => {
+    engine = new SheetEngine();
+    engine.setCell(0, 0, '5'); // A1
+    expect(engine.evaluate('1+2')).toBe(3);
+    expect(engine.evaluate('=A1>3')).toBe(1); // leading = tolerated; comparison → 1
+    expect(engine.evaluate('A1<3')).toBe(0);
+    expect(engine.evaluate('NOPE(1)')).toBe('#NAME?'); // error code, never throws
+    expect(engine.evaluate('')).toBeNull();
+  });
 });

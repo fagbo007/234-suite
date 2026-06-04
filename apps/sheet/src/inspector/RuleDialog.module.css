@@ -14,30 +14,15 @@
   color: var(--color-fg-secondary);
 }
 
-.row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.label {
+.hint {
+  margin: 0;
   font-size: var(--font-size-meta);
+  color: var(--color-fg-muted);
+}
+
+.hint code {
+  font-family: var(--font-family-mono, monospace);
   color: var(--color-fg-secondary);
-}
-
-.select {
-  font-family: var(--font-family-base);
-  font-size: var(--font-size-body);
-  color: var(--color-fg-primary);
-  background: var(--color-bg-base);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-interactive);
-  padding: var(--space-1) var(--space-2);
-}
-
-.select:focus-visible {
-  outline: 2px solid var(--color-focus-ring);
-  outline-offset: 1px;
 }
 
 .actions {

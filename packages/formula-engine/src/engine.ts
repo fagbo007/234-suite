@@ -133,6 +133,22 @@ export class SheetEngine {
     return values;
   }
 
+  /**
+   * Evaluate an arbitrary formula expression (no leading `=`) against the
+   * current sheet — used for rule predicates (conditional formatting / data
+   * validation). Returns a number or an Excel error code; never throws.
+   */
+  evaluate(formula: string): CellValue {
+    const raw = formula.startsWith('=') ? formula.slice(1) : formula;
+    if (raw.trim() === '') return null;
+    try {
+      return evaluateFormula(raw, (r, c) => this.computeNumeric(r, c, new Set()), this.resolveRef);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      return ERROR_CODE.test(message) ? message : '#ERROR!';
+    }
+  }
+
   // --- Structural edits (preserve named-reference integrity) ---
 
   /** Insert a row at `at`: shift cell contents down and shift named refs. */
