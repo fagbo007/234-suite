@@ -117,6 +117,24 @@ describe('SheetEngine', () => {
     expect(engine.readRange('top')).toEqual([10]);
   });
 
+  it('evaluates COUNTIF / SUMIF / AVERAGEIF with comparison or value criteria', () => {
+    engine = new SheetEngine();
+    [5, 15, 20, 8, 25].forEach((v, r) => engine!.setCell(r, 0, String(v))); // A1:A5
+    [1, 2, 3, 4, 5].forEach((v, r) => engine!.setCell(r, 1, String(v))); // B1:B5
+
+    engine.setCell(0, 2, '=COUNTIF(A1:A5, >10)'); // 15, 20, 25 → 3
+    engine.setCell(1, 2, '=COUNTIF(A1:A5, 8)'); // exact match → 1
+    engine.setCell(2, 2, '=SUMIF(A1:A5, >10)'); // 15+20+25 → 60
+    engine.setCell(3, 2, '=SUMIF(A1:A5, >10, B1:B5)'); // B2+B3+B5 = 2+3+5 → 10
+    engine.setCell(4, 2, '=AVERAGEIF(A1:A5, >10)'); // 60/3 → 20
+
+    expect(engine.getValue(0, 2)).toBe(3);
+    expect(engine.getValue(1, 2)).toBe(1);
+    expect(engine.getValue(2, 2)).toBe(60);
+    expect(engine.getValue(3, 2)).toBe(10);
+    expect(engine.getValue(4, 2)).toBe(20);
+  });
+
   it('evaluates ad-hoc expressions via evaluate() (for rule predicates)', () => {
     engine = new SheetEngine();
     engine.setCell(0, 0, '5'); // A1

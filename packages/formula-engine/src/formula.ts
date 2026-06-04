@@ -6,7 +6,8 @@ import { a1ToCell } from './a1';
  *  - arithmetic (`+ - * / ^`, parens, unary minus) and ranges
  *  - comparisons (`= <> < <= > >=`) — booleans are numeric (TRUE=1, FALSE=0)
  *  - functions: SUM / AVERAGE / COUNT / MIN / MAX, IF (lazy branches),
- *    AND / OR / NOT, ABS / INT / SQRT / POWER / MOD / ROUND
+ *    AND / OR / NOT, ABS / INT / SQRT / POWER / MOD / ROUND,
+ *    COUNTIF / SUMIF / AVERAGEIF (criteria = a comparison like `>10` or a value)
  * Further breadth (SUMIF, lookups, text, dates, arrays) stays planned — see
  * docs/formula-compat.md; unknown functions return `#NAME?` (never guessed).
  *
@@ -289,6 +290,9 @@ class Parser {
     this.next(); // ident
     this.next(); // lparen
     if (name === 'IF') return this.ifCall();
+    if (name === 'COUNTIF' || name === 'SUMIF' || name === 'AVERAGEIF') {
+      return this.conditionalAggregate(name);
+    }
     const values: (number | null)[] = [];
     if (this.peek()?.type !== 'rparen') {
       do {
@@ -353,22 +357,68 @@ class Parser {
   }
 
   private argument(values: (number | null)[]): void {
+    for (const v of this.rangeValues()) values.push(v);
+  }
+
+  /** Read one argument as a flat value list: a range `A1:B2` expands; else a scalar. */
+  private rangeValues(): (number | null)[] {
     const token = this.peek();
     if (token?.type === 'ident' && this.at(1)?.type === 'colon' && this.at(2)?.type === 'ident') {
       const startToken = this.next() as Token & { value: string };
       this.next(); // colon
       const endToken = this.next() as Token & { value: string };
       const [r0c0, r1c1] = [this.coord(startToken.value), this.coord(endToken.value)];
-      const rowStart = Math.min(r0c0[0], r1c1[0]);
-      const rowEnd = Math.max(r0c0[0], r1c1[0]);
-      const colStart = Math.min(r0c0[1], r1c1[1]);
-      const colEnd = Math.max(r0c0[1], r1c1[1]);
-      for (let r = rowStart; r <= rowEnd; r++) {
-        for (let c = colStart; c <= colEnd; c++) values.push(this.resolve(r, c));
+      const values: (number | null)[] = [];
+      for (let r = Math.min(r0c0[0], r1c1[0]); r <= Math.max(r0c0[0], r1c1[0]); r++) {
+        for (let c = Math.min(r0c0[1], r1c1[1]); c <= Math.max(r0c0[1], r1c1[1]); c++) {
+          values.push(this.resolve(r, c));
+        }
       }
-    } else {
-      values.push(this.comparison());
+      return values;
     }
+    return [this.comparison()];
+  }
+
+  /**
+   * COUNTIF / SUMIF / AVERAGEIF: `(range, criteria[, sum_range])`. Criteria is a
+   * comparison (`>10`, `<>0`) or a bare value (exact match) — our numeric-only
+   * equivalent of Excel's quoted string criteria. SUMIF/AVERAGEIF sum/average the
+   * aligned `sum_range` (or `range`) where the criteria matches.
+   */
+  private conditionalAggregate(name: string): number {
+    const range = this.rangeValues();
+    this.expectComma();
+    const { op, threshold } = this.parseCriteria();
+    let sumRange: (number | null)[] | null = null;
+    if (this.peek()?.type === 'comma') {
+      this.next();
+      sumRange = this.rangeValues();
+    }
+    if (this.peek()?.type !== 'rparen') throw new Error('#ERROR!');
+    this.next(); // rparen
+
+    const matched: number[] = [];
+    range.forEach((v, i) => {
+      if (v !== null && compare(v, op, threshold)) matched.push(i);
+    });
+    if (name === 'COUNTIF') return matched.length;
+
+    const source = sumRange ?? range;
+    const picked = matched.map((i) => source[i] ?? 0);
+    if (name === 'SUMIF') return picked.reduce((a, b) => a + b, 0);
+    if (picked.length === 0) throw new Error('#DIV/0!'); // AVERAGEIF
+    return picked.reduce((a, b) => a + b, 0) / picked.length;
+  }
+
+  /** Parse a criteria argument: an optional comparator then a threshold expression. */
+  private parseCriteria(): { op: string; threshold: number } {
+    const token = this.peek();
+    let op = '=';
+    if (token?.type === 'op' && Parser.COMPARATORS.has(token.value)) {
+      op = token.value;
+      this.next();
+    }
+    return { op, threshold: this.expression() };
   }
 
   private coord(ref: string): [number, number] {
