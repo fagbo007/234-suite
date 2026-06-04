@@ -9,9 +9,10 @@ import { a1ToCell } from './a1';
  *  - comparisons (`= <> < <= > >=`) — numeric, or lexicographic for text
  *  - functions: SUM / AVERAGE / COUNT / MIN / MAX, IF (lazy branches),
  *    AND / OR / NOT, ABS / INT / SQRT / POWER / MOD / ROUND,
- *    COUNTIF / SUMIF / AVERAGEIF, and text: CONCAT / CONCATENATE / LEN /
- *    UPPER / LOWER / TRIM / LEFT / RIGHT
- * Further breadth (lookups, dates, arrays) stays planned — see
+ *    COUNTIF / SUMIF / AVERAGEIF, text: CONCAT / CONCATENATE / LEN / UPPER /
+ *    LOWER / TRIM / LEFT / RIGHT, and dates: DATE / DATEVALUE / YEAR / MONTH /
+ *    DAY / DATEDIF (serial day-counts since 1970-01-01; TODAY/NOW need a clock)
+ * Further breadth (lookups, arrays) stays planned — see
  * docs/formula-compat.md; unknown functions return `#NAME?` (never guessed).
  *
  * Errors are thrown as `Error` whose message is an Excel-style code
@@ -53,6 +54,49 @@ function toNumber(v: FormulaValue | null): number {
 function toText(v: FormulaValue | null): string {
   if (v === null) return '';
   return typeof v === 'number' ? String(v) : v;
+}
+
+// --- dates: serial = integer days since 1970-01-01 UTC (DATE(1970,1,1) = 0) ---
+
+const MS_PER_DAY = 86_400_000;
+
+function ymdToSerial(year: number, month: number, day: number): number {
+  // Date.UTC normalises overflow (e.g. month 13 → next January), like Excel.
+  return Math.floor(Date.UTC(year, month - 1, day) / MS_PER_DAY);
+}
+
+function serialToYmd(serial: number): { year: number; month: number; day: number } {
+  const d = new Date(Math.round(serial) * MS_PER_DAY);
+  return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1, day: d.getUTCDate() };
+}
+
+/** Parse an ISO `YYYY-MM-DD` string to a serial; throws #VALUE! if invalid. */
+function dateValue(text: string): number {
+  const match = /^\s*(\d{4})-(\d{1,2})-(\d{1,2})\s*$/.exec(text);
+  if (!match) throw new Error('#VALUE!');
+  const [year, month, day] = [Number(match[1]), Number(match[2]), Number(match[3])];
+  const serial = ymdToSerial(year, month, day);
+  // Reject out-of-range parts (e.g. month 13, day 40) that Date.UTC would roll over.
+  const back = serialToYmd(serial);
+  if (back.year !== year || back.month !== month || back.day !== day) throw new Error('#VALUE!');
+  return serial;
+}
+
+function dateDiff(start: number, end: number, unit: string): number {
+  if (unit === 'd') return Math.round(end) - Math.round(start);
+  const a = serialToYmd(start);
+  const b = serialToYmd(end);
+  if (unit === 'y') {
+    let years = b.year - a.year;
+    if (b.month < a.month || (b.month === a.month && b.day < a.day)) years -= 1;
+    return years;
+  }
+  if (unit === 'm') {
+    let months = (b.year - a.year) * 12 + (b.month - a.month);
+    if (b.day < a.day) months -= 1;
+    return months;
+  }
+  throw new Error('#VALUE!');
 }
 
 function orderNum(x: number, op: string, y: number): boolean {
@@ -258,6 +302,19 @@ function applyFunction(name: string, values: (FormulaValue | null)[]): FormulaVa
       const n = Math.max(0, Math.trunc(toNumber(values[1] ?? 1)));
       return s.slice(s.length - n);
     }
+    // Dates — serial day-counts since 1970-01-01 (no auto-coercion; DATEVALUE is explicit).
+    case 'DATE':
+      return ymdToSerial(toNumber(values[0] ?? 0), toNumber(values[1] ?? 0), toNumber(values[2] ?? 0));
+    case 'DATEVALUE':
+      return dateValue(toText(values[0] ?? ''));
+    case 'YEAR':
+      return serialToYmd(toNumber(values[0] ?? 0)).year;
+    case 'MONTH':
+      return serialToYmd(toNumber(values[0] ?? 0)).month;
+    case 'DAY':
+      return serialToYmd(toNumber(values[0] ?? 0)).day;
+    case 'DATEDIF':
+      return dateDiff(toNumber(values[0] ?? 0), toNumber(values[1] ?? 0), toText(values[2] ?? ''));
     default:
       throw new Error('#NAME?'); // unsupported function — never guess (Section 3.3)
   }

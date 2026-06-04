@@ -149,6 +149,13 @@ describe('SheetEngine', () => {
     expect(engine.getValue(2, 1)).toBe('HELLO');
   });
 
+  it('bridges a date-string cell to date arithmetic via DATEVALUE', () => {
+    engine = new SheetEngine();
+    engine.setCell(0, 0, '2026-06-04'); // A1 (a date-column raw string)
+    engine.setCell(0, 1, '=DATEDIF(DATEVALUE(A1), DATE(2026, 6, 10), "d")');
+    expect(engine.getValue(0, 1)).toBe(6);
+  });
+
   it('evaluates ad-hoc expressions via evaluate() (for rule predicates)', () => {
     engine = new SheetEngine();
     engine.setCell(0, 0, '5'); // A1

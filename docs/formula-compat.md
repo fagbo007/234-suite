@@ -29,6 +29,7 @@
 | `COUNTIF`, `SUMIF`, `AVERAGEIF` | Supported | `(range, criteria[, sum_range])`; criteria is a comparison (`>10`, `<>0`), a value, or text (`"apple"`) |
 | Text: string literals, `&` concat, comparisons | Supported | Values are `number \| string`; string comparisons are case-insensitive; mixed types rank number < text |
 | `CONCAT`, `CONCATENATE`, `LEN`, `UPPER`, `LOWER`, `TRIM`, `LEFT`, `RIGHT` | Supported | Text functions |
+| `DATE`, `DATEVALUE`, `YEAR`, `MONTH`, `DAY`, `DATEDIF` | Supported | Dates are serial day-counts since 1970-01-01; `DATEVALUE` parses ISO `YYYY-MM-DD`; `DATEDIF` unit `"d"`/`"m"`/`"y"`. No auto-coercion — `DATEVALUE` is explicit (§2.2) |
 | Cell / range references | Supported | Stored as named refs / coordinates; A1 display-only (see `formula-refs.md`) |
 | Error codes | Supported | `#DIV/0!`, `#NAME?` (unknown fn), `#NUM!`, `#CYCLE!`, `#VALUE!`, `#ERROR!` |
 
@@ -40,7 +41,8 @@ Performance: evaluating 10,000 formula cells is gated under 500ms (root §8).
 |---|---|
 | `VLOOKUP`, `HLOOKUP`, `INDEX`, `MATCH`, `XLOOKUP` | Phase 2+ |
 | `TEXTJOIN`, `MID`, `SUBSTITUTE`, `FIND` | Phase 2+ |
-| `DATE`, `TODAY`, `NOW`, `DATEDIF` | Phase 2+ (with explicit date columns — no coercion, §2.2) |
+| `TODAY`, `NOW` | Phase 2+ (need an injected clock to stay deterministic/testable) |
+| `EDATE`, `EOMONTH`, `WEEKDAY`, `NETWORKDAYS` | Phase 2+ |
 | Dynamic arrays / spill (`FILTER`, `SORT`, `UNIQUE`) | Phase 2+ |
 
 ## Maintenance

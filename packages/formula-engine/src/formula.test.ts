@@ -97,3 +97,26 @@ describe('text values', () => {
     expect(() => evalNum('"abc" + 1')).toThrow('#VALUE!');
   });
 });
+
+describe('dates (serial day-counts since 1970-01-01)', () => {
+  it('DATE / YEAR / MONTH / DAY round-trip', () => {
+    expect(evalNum('DATE(1970, 1, 1)')).toBe(0);
+    const serial = Number(evalNum('DATE(2026, 6, 4)'));
+    expect(evalNum(`YEAR(${serial})`)).toBe(2026);
+    expect(evalNum(`MONTH(${serial})`)).toBe(6);
+    expect(evalNum(`DAY(${serial})`)).toBe(4);
+  });
+
+  it('DATEVALUE parses ISO and matches DATE', () => {
+    expect(evalNum('DATEVALUE("2026-06-04")')).toBe(evalNum('DATE(2026, 6, 4)'));
+    expect(() => evalNum('DATEVALUE("nope")')).toThrow('#VALUE!');
+    expect(() => evalNum('DATEVALUE("2026-13-01")')).toThrow('#VALUE!'); // out-of-range month
+  });
+
+  it('DATEDIF computes day / month / year differences', () => {
+    expect(evalNum('DATEDIF(DATE(2026, 1, 1), DATE(2026, 12, 31), "d")')).toBe(364);
+    expect(evalNum('DATEDIF(DATE(2026, 1, 1), DATE(2026, 12, 31), "m")')).toBe(11);
+    expect(evalNum('DATEDIF(DATE(2020, 6, 4), DATE(2026, 6, 4), "y")')).toBe(6);
+    expect(() => evalNum('DATEDIF(0, 1, "x")')).toThrow('#VALUE!');
+  });
+});
