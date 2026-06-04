@@ -170,6 +170,27 @@ describe('SheetEngine', () => {
     expect(engine.getValue(9, 5)).toBe('#REF!');
   });
 
+  it('looks up across rows with HLOOKUP and XLOOKUP', () => {
+    engine = new SheetEngine();
+    // A1:C2 — header row + values row.
+    ['Q1', 'Q2', 'Q3'].forEach((v, c) => engine!.setCell(0, c, v));
+    [100, 200, 300].forEach((v, c) => engine!.setCell(1, c, String(v)));
+
+    engine.setCell(0, 4, '=HLOOKUP("Q2", A1:C2, 2)'); // → 200
+    engine.setCell(1, 4, '=HLOOKUP("Q9", A1:C2, 2)'); // → #N/A
+    engine.setCell(2, 4, '=HLOOKUP("Q1", A1:C2, 3)'); // → #REF!
+    engine.setCell(3, 4, '=XLOOKUP("Q3", A1:C1, A2:C2)'); // → 300
+    engine.setCell(4, 4, '=XLOOKUP("Q9", A1:C1, A2:C2, 0)'); // not found → 0
+    engine.setCell(5, 4, '=XLOOKUP("Q9", A1:C1, A2:C2)'); // → #N/A
+
+    expect(engine.getValue(0, 4)).toBe(200);
+    expect(engine.getValue(1, 4)).toBe('#N/A');
+    expect(engine.getValue(2, 4)).toBe('#REF!');
+    expect(engine.getValue(3, 4)).toBe(300);
+    expect(engine.getValue(4, 4)).toBe(0);
+    expect(engine.getValue(5, 4)).toBe('#N/A');
+  });
+
   it('handles text cells: concatenation, SUM ignores text, string results', () => {
     engine = new SheetEngine();
     engine.setCell(0, 0, 'hello'); // A1 (text)

@@ -12,8 +12,8 @@ import { a1ToCell } from './a1';
  *    COUNTIF / SUMIF / AVERAGEIF, text: CONCAT / CONCATENATE / LEN / UPPER /
  *    LOWER / TRIM / LEFT / RIGHT, and dates: DATE / DATEVALUE / YEAR / MONTH /
  *    DAY / DATEDIF (serial day-counts since 1970-01-01; TODAY/NOW need a clock),
- *    and lookups: VLOOKUP / INDEX / MATCH (exact match by default)
- * Further breadth (HLOOKUP/XLOOKUP, arrays) stays planned — see
+ *    and lookups: VLOOKUP / HLOOKUP / XLOOKUP / INDEX / MATCH (exact by default)
+ * Further breadth (dynamic arrays / spill) stays planned — see
  * docs/formula-compat.md; unknown functions return `#NAME?` (never guessed).
  *
  * Errors are thrown as `Error` whose message is an Excel-style code
@@ -466,6 +466,8 @@ class Parser {
       return this.conditionalAggregate(name);
     }
     if (name === 'VLOOKUP') return this.vlookup();
+    if (name === 'HLOOKUP') return this.hlookup();
+    if (name === 'XLOOKUP') return this.xlookup();
     if (name === 'INDEX') return this.indexFn();
     if (name === 'MATCH') return this.matchFn();
     const values: (FormulaValue | null)[] = [];
@@ -682,6 +684,62 @@ class Parser {
     const row = table[matchRow]!;
     if (colIndex < 1 || colIndex > row.length) throw new Error('#REF!');
     return row[colIndex - 1] ?? 0;
+  }
+
+  /**
+   * HLOOKUP(lookup, table, rowIndex, [approx]) — the row-wise twin of VLOOKUP:
+   * searches the table's first ROW, returns the matched column's rowIndex cell.
+   */
+  private hlookup(): FormulaValue {
+    const lookup = this.comparison();
+    this.expectComma();
+    const table = this.rangeRect();
+    this.expectComma();
+    const rowIndex = Math.trunc(toNumber(this.comparison()));
+    let approx = 0;
+    if (this.peek()?.type === 'comma') {
+      this.next();
+      approx = toNumber(this.comparison());
+    }
+    this.expectRparen();
+
+    const header = table[0] ?? [];
+    let matchCol = -1;
+    if (approx === 0) {
+      matchCol = header.findIndex((v) => v != null && compareValues(v, '=', lookup));
+    } else {
+      header.forEach((v, i) => {
+        if (v != null && compareValues(v, '<=', lookup)) matchCol = i;
+      });
+    }
+    if (matchCol === -1) throw new Error('#N/A');
+    if (rowIndex < 1 || rowIndex > table.length) throw new Error('#REF!');
+    return table[rowIndex - 1]![matchCol] ?? 0;
+  }
+
+  /**
+   * XLOOKUP(lookup, lookup_range, return_range, [if_not_found]) — exact match;
+   * returns the aligned cell in return_range, or if_not_found / #N/A on a miss.
+   */
+  private xlookup(): FormulaValue {
+    const lookup = this.comparison();
+    this.expectComma();
+    const lookupRange = this.rangeRect().flat();
+    this.expectComma();
+    const returnRange = this.rangeRect().flat();
+    let ifNotFound: FormulaValue | undefined;
+    if (this.peek()?.type === 'comma') {
+      this.next();
+      ifNotFound = this.comparison();
+    }
+    this.expectRparen();
+
+    const idx = lookupRange.findIndex((v) => v !== null && compareValues(v, '=', lookup));
+    if (idx === -1) {
+      if (ifNotFound !== undefined) return ifNotFound;
+      throw new Error('#N/A');
+    }
+    return returnRange[idx] ?? 0;
   }
 
   /** INDEX(range, rowNum, [colNum]) — 1-based; out of range → #REF!. */
