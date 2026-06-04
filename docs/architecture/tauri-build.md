@@ -1,16 +1,25 @@
-# Building the native Tauri window (234 Writer)
+# Building the native Tauri windows (234 suite)
 
-234 Writer's native desktop window has been **built and run** on a Rust + MSVC
-machine (2026-06-04): `tauri dev` launches the hot-reload window, `tauri build`
-produces an optimized `writer.exe` (~8.3 MB) and an **NSIS `.exe` installer**
-(~1.9 MB). This is the turnkey runbook for reproducing that build. macOS/Linux
-notes at the end.
+All three 234 apps have native desktop windows that **build and run** on a Rust +
+MSVC machine (2026-06-04): `tauri dev` launches a hot-reload window and
+`tauri build --bundles nsis` produces an optimized `<app>.exe` plus an **NSIS
+`.exe` installer**. This is the turnkey runbook for reproducing those builds.
+macOS/Linux notes at the end.
 
-> Status: **234 Writer** has a complete, **building** `src-tauri/` scaffold
-> (`Cargo.toml`, `tauri.conf.json` v2, `src/main.rs` + `src/lib.rs`,
-> `capabilities/`, and the committed icon set) — release binary + NSIS installer
-> verified. 234 Sheet / Slides are not yet scaffolded — same steps apply once
-> they are.
+> Status: **234 Writer, Sheet, and Slides** each have a complete, **building**
+> `src-tauri/` scaffold (`Cargo.toml`, `tauri.conf.json` v2, `src/main.rs` +
+> `src/lib.rs`, `capabilities/`, committed icon set, tracked `Cargo.lock`) —
+> release binary + NSIS installer verified for all three.
+
+| App | Binary | NSIS installer | Vite dev port |
+|---|---|---|---|
+| 234 Writer | `writer.exe` (~8.3 MB) | `234 Writer_0.0.0_x64-setup.exe` (~1.9 MB) | 5173 |
+| 234 Sheet | `sheet.exe` (~8.1 MB) | `234 Sheet_0.0.0_x64-setup.exe` (~1.8 MB) | 5174 |
+| 234 Slides | `slides.exe` (~8.2 MB) | `234 Slides_0.0.0_x64-setup.exe` (~1.9 MB) | 5175 |
+
+Each app pins a fixed Vite dev port (`strictPort`) so its `tauri.conf.json`
+`devUrl` reliably matches during `tauri dev`. The per-app suite installer (root
+§3.2) is assembled from these in Phase 4.
 
 ## Prerequisites (one-time, on the build machine)
 
@@ -35,21 +44,28 @@ WebView2 should all show ✓).
 
 ## Build / run
 
+Substitute `writer` with `sheet` or `slides` for the other apps — the commands
+are identical.
+
 ```powershell
 pnpm install
-# Icons are committed; regenerate only if app-icon.png changes:
-#   pnpm --filter @234/writer exec tauri icon apps/writer/src-tauri/icons/app-icon.png
+# Icons are committed; regenerate only if app-icon.png changes (run from repo root):
+#   pnpm --filter @234/writer exec tauri icon src-tauri/icons/app-icon.png
 
-# Dev (hot-reload; runs `pnpm dev` via beforeDevCommand → Vite on :5173):
+# Dev (hot-reload; runs `pnpm dev` via beforeDevCommand → Vite on the app's port):
 pnpm --filter @234/writer tauri dev
 
 # Release bundle. The NSIS .exe is the Windows target (root §3.2):
 pnpm --filter @234/writer tauri build --bundles nsis
 ```
 
-Output bundles land in `apps/writer/src-tauri/target/release/bundle/` — e.g.
+Output bundles land in `apps/<app>/src-tauri/target/release/bundle/` — e.g.
 `nsis/234 Writer_0.0.0_x64-setup.exe`. The first `tauri build` downloads the NSIS
 toolchain into `%LOCALAPPDATA%\tauri\` automatically.
+
+> Note: `tauri icon`'s source path is resolved relative to the app package dir
+> (pnpm sets the cwd), so use `src-tauri/icons/app-icon.png`, not the repo-root
+> path.
 
 ### Windows bundle target: NSIS, not MSI
 
@@ -79,5 +95,8 @@ in CI where the workspace path has no spaces.
   machine, including this one. Only the **compile/bundle** step needs the
   Rust + MSVC toolchain.
 - The single-installer suite + per-app installers (root §3.2) are assembled in
-  Phase 4 once all three apps are scaffolded and building.
-- Never commit `src-tauri/target/` (git-ignored).
+  Phase 4 from the three now-building per-app bundles.
+- Never commit `src-tauri/target/` or `src-tauri/gen/` (both git-ignored). The
+  per-app `Cargo.lock` **is** tracked for reproducible native builds.
+- All three apps currently share the same placeholder `app-icon.png`; replace
+  each with real per-app branding when available (regenerate via `tauri icon`).

@@ -880,6 +880,21 @@ Format: `YYYY-MM-DD | Decision | Rationale | Alternatives considered`
              Alternatives for MSI: move the checkout to a space-free path (e.g.
              C:\dev\project-234) or build MSI in CI (deferred — NSIS suffices for
              Windows). See docs/architecture/tauri-build.md.
+
+2026-06-04 | 234 Sheet and 234 Slides now have native Tauri shells, mirroring
+             Writer's proven src-tauri (Cargo.toml with sheet_lib/slides_lib,
+             build.rs, main.rs/lib.rs, capabilities, tauri.conf.json v2, committed
+             icon set, tracked Cargo.lock). Each app pins a fixed Vite dev port
+             (Writer 5173, Sheet 5174, Slides 5175, strictPort) so its devUrl
+             matches under `tauri dev`. All three release-build + bundle an NSIS
+             installer (writer/sheet/slides .exe ~8 MB; *_x64-setup.exe ~1.8-1.9
+             MB), verified 2026-06-04. |
+             Brings the whole suite to native windows + per-app installers,
+             de-risking the §3.2 single-installer suite (assembled in Phase 4). |
+             Alternatives: distinct per-app icons now (deferred — shared
+             placeholder app-icon.png until real branding); one shared cargo
+             workspace target dir (rejected — per-app isolation matches §3.2
+             "crash in Sheet does not affect Writer").
 ```
 
 ---
