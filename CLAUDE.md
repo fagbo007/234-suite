@@ -862,6 +862,24 @@ Format: `YYYY-MM-DD | Decision | Rationale | Alternatives considered`
              Alternatives: blind winget MSVC install here (rejected — UAC can't be
              answered non-interactively, risks hanging); hand-roll .ico/.icns
              (rejected — `tauri icon` is the idiomatic, correct generator).
+
+2026-06-04 | SUPERSEDES the "native compile CANNOT run here" finding above: the
+             toolchain (Rust 1.96 MSVC + Visual Studio 2022 Build Tools/VCTools +
+             WebView2) is now installed, so 234 Writer's native window BUILDS and
+             RUNS. `tauri dev` launches the hot-reload window (Vite :5173 + debug
+             cargo); `tauri build --bundles nsis` produces an optimized
+             writer.exe (~8.3 MB) and an NSIS installer
+             (234 Writer_0.0.0_x64-setup.exe, ~1.9 MB). The Windows bundle target
+             is NSIS, NOT MSI: WiX `light.exe` fails on paths containing spaces/
+             special chars (this repo is under `…\OneDrive - Architech\…`), so
+             `targets:"all"` aborts at the MSI step. NSIS has no such limitation
+             and is the §3.2 Windows deliverable. |
+             Proves the Tauri shell end-to-end (the long-deferred window) and
+             delivers the §3.2 Windows installer. NSIS is the documented Windows
+             target; MSI is a bonus blocked only by the checkout path, not code. |
+             Alternatives for MSI: move the checkout to a space-free path (e.g.
+             C:\dev\project-234) or build MSI in CI (deferred — NSIS suffices for
+             Windows). See docs/architecture/tauri-build.md.
 ```
 
 ---
