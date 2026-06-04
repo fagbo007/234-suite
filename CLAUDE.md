@@ -844,6 +844,24 @@ Format: `YYYY-MM-DD | Decision | Rationale | Alternatives considered`
              docked. |
              Alternatives: ship a browser-only cloud key store (rejected —
              can't meet §6 secure-storage / no-plaintext rule without the backend).
+
+2026-06-04 | Tauri build made turnkey for a tooled machine: generated 234 Writer's
+             committed icon set (32x32/128x128/icon.ico/icon.icns + Windows
+             Square*/StoreLogo) from a placeholder app-icon.png via `tauri icon`
+             (a Node command — no Rust), removing the only non-toolchain build
+             blocker; added docs/architecture/tauri-build.md (winget prerequisites
+             + dev/build commands). The native compile still CANNOT run on this
+             machine — Rust + MSVC C++ Build Tools are absent and installing MSVC
+             needs admin/UAC, unavailable in this non-interactive, non-admin
+             session (re-verified 2026-06-04: rustc/cargo/cl.exe/vswhere all
+             MISSING, IsAdmin=False). |
+             "Get it onto a machine with MSVC + Rust" can't be done from inside
+             this un-tooled host; the next best thing is a turnkey, fully-iconed
+             scaffold + an exact runbook so the window builds in a few commands on
+             an MSVC+Rust machine. |
+             Alternatives: blind winget MSVC install here (rejected — UAC can't be
+             answered non-interactively, risks hanging); hand-roll .ico/.icns
+             (rejected — `tauri icon` is the idiomatic, correct generator).
 ```
 
 ---

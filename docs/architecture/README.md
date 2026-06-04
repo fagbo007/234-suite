@@ -9,6 +9,7 @@ expand on individual decisions.
 | Document | What it covers |
 |---|---|
 | [`app-shell.md`](./app-shell.md) | Suite installer + three isolated processes; structure-first build order |
+| [`tauri-build.md`](./tauri-build.md) | Turnkey runbook for building the native Tauri window (toolchain prerequisites) |
 | [`formula-refs.md`](./formula-refs.md) | 234 Sheet named-reference translation layer; the engine-agnostic boundary (MIT engine) |
 | [`ai-sidebar.md`](./ai-sidebar.md) | The AI sidebar rule (§6); offline-first scaffold; cloud/key-storage deferral |
 | [`accessibility.md`](./accessibility.md) | The Phase 2 accessibility audit + checklist |
