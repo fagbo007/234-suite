@@ -81,6 +81,23 @@ To also get the MSI, either move the checkout to a plain path (e.g.
 `C:\dev\project-234`) and run `tauri build` without the flag, or produce the MSI
 in CI where the workspace path has no spaces.
 
+## Suite installer (all apps + launcher)
+
+The per-app commands above produce standalone installers. To build the **single
+234 Suite installer** (launcher + all three apps, one install — root §3.2), build
+all four release binaries, then run the suite script:
+
+```powershell
+pnpm --filter @234/writer   tauri build --bundles nsis
+pnpm --filter @234/sheet    tauri build --bundles nsis
+pnpm --filter @234/slides   tauri build --bundles nsis
+pnpm --filter @234/launcher tauri build --bundles nsis
+./installer/build-suite.ps1   # → installer/dist/234 Suite_0.0.0_x64-setup.exe
+```
+
+See [`../../installer/README.md`](../../installer/README.md) for the design
+(unified layout, sibling-relative launch, WebView2 bootstrap).
+
 ## macOS / Linux
 
 - **macOS:** install Rust via rustup + Xcode Command Line Tools (`xcode-select

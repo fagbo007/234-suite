@@ -895,6 +895,28 @@ Format: `YYYY-MM-DD | Decision | Rationale | Alternatives considered`
              placeholder app-icon.png until real branding); one shared cargo
              workspace target dir (rejected — per-app isolation matches §3.2
              "crash in Sheet does not affect Writer").
+
+2026-06-04 | Suite shell (§3.2) built: a 234 Launcher Tauri app (apps/launcher)
+             + a single Windows NSIS suite installer. The launcher window lists
+             the three apps and opens each as a SEPARATE process via a Rust
+             command (`launch_app` → std::process::Command), honouring "three
+             isolated processes". Apps are resolved sibling-relative to the
+             launcher exe (current_exe parent), so the suite installer
+             (installer/234-suite.nsi, built by installer/build-suite.ps1 with
+             Tauri's bundled makensis) lays all four self-contained exes into one
+             per-user dir (%LOCALAPPDATA%\234 Suite), bootstraps WebView2 once,
+             and writes a "234 Suite" Start-menu folder + one uninstall entry.
+             Per-app standalone installers remain available. |
+             Delivers the §3.2 "single installer + launcher" without a registry
+             lookup or extra Rust crate; reuses Tauri's self-contained exes and
+             downloaded makensis. Owner chose a real launcher app over a
+             Start-menu-only folder. |
+             Alternatives: wrapper that silently runs the 3 per-app installers
+             (rejected — apps land in separate dirs, forcing a registry lookup);
+             Start-menu shortcuts only, no launcher app (rejected by owner);
+             hand-rolled launcher path via registry InstallLocation (unneeded
+             given the unified layout). macOS/Linux suite installers follow the
+             same pattern (deferred — Windows host).
 ```
 
 ---

@@ -137,11 +137,41 @@ docs/architecture/app-shell.md # this file
 
 ---
 
-## 5. Open follow-ups (track as the shell is built)
+## 6. Suite installer + launcher (built — 2026-06-04)
 
-- `src-tauri` for **Sheet and Slides** (Writer is scaffolded — §3a); shared Tauri
-  config conventions. Native window build pending an MSVC/Rust-equipped host.
-- Launcher implementation and how it spawns/standalone-detects each app.
+All four apps now build native windows on an MSVC + Rust machine, so the §3.2
+suite shell is real:
+
+- **234 Launcher** (`apps/launcher`) — a small Tauri app whose window lists
+  Writer / Sheet / Slides as cards. Clicking one calls the Rust command
+  `launch_app(app)` (`src-tauri/src/lib.rs`), which spawns `<app>.exe` as a
+  **separate OS process** via `std::process::Command` — satisfying "three
+  isolated processes; a crash in Sheet does not affect Writer" (§3.2).
+- **Sibling-relative resolution.** Each app is found as a sibling of the
+  launcher's own executable (`current_exe()` → parent → `writer.exe` …). Because
+  the suite installer puts all four binaries in one directory, **no registry
+  lookup is needed**. In the plain web dev build (no Tauri) the launcher shows a
+  friendly note instead of invoking.
+- **Unified Windows installer.** `installer/234-suite.nsi` (compiled by
+  `installer/build-suite.ps1` with Tauri's bundled `makensis`) lays the four
+  self-contained exes into `%LOCALAPPDATA%\234 Suite`, bootstraps WebView2 once,
+  creates a "234 Suite" Start-menu folder (launcher + each app) and one uninstall
+  entry. Tauri exes embed their frontend, so only WebView2 is an external runtime
+  dependency. Output: `installer/dist/234 Suite_0.0.0_x64-setup.exe`. See
+  [`../../installer/README.md`](../../installer/README.md).
+- **Standalone still available.** Each app's own NSIS installer (from
+  `tauri build`) remains a separate per-app option, as §3.2 requires.
+
+`tauri-build.md` covers the toolchain; this is the suite assembly on top of it.
+macOS `.dmg` / Linux `.AppImage` suite installers follow the same pattern on
+those OSes (not built on this Windows host).
+
+---
+
+## 7. Open follow-ups (track as the shell is built)
+
 - Pre-commit and post-edit hooks (Section 12) — not part of the Step 1 checklist;
   wire when the test/benchmark commands they depend on exist.
-- Packaging pipeline for the installer matrix (Phase 4).
+- macOS `.dmg` / Linux `.AppImage` suite installers (same unified pattern).
+- Real per-app icon branding (all apps currently share a placeholder
+  `app-icon.png`); auto-update + code signing for distribution.

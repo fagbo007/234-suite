@@ -5,6 +5,7 @@
     { "path": "apps/writer" },
     { "path": "apps/sheet" },
     { "path": "apps/slides" },
+    { "path": "apps/launcher" },
     { "path": "packages/formula-engine" },
     { "path": "packages/compat" },
     { "path": "packages/ai-sidebar" }

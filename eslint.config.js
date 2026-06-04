@@ -11,6 +11,9 @@ export default tseslint.config(
       'coverage/**',
       'playwright-report/**',
       'test-results/**',
+      // Tauri/Rust build output (generated JS/assets — never our source).
+      '**/src-tauri/target/**',
+      '**/src-tauri/gen/**',
       // Author tooling — plain Node ESM, run manually to generate templates.
       'apps/slides/templates/scaffold.mjs',
     ],

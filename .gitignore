@@ -12,6 +12,9 @@ target/
 **/src-tauri/target/
 **/src-tauri/gen/
 
+# Suite installer output (also covered by dist/ above; explicit for clarity)
+installer/dist/
+
 # Test / coverage artifacts
 coverage/
 playwright-report/
