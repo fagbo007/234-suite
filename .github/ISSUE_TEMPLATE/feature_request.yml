@@ -1,0 +1,41 @@
+name: Feature request
+description: Suggest an improvement or new capability
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        234 is built to fix specific, documented pain points. The clearer the pain, the stronger the proposal.
+  - type: dropdown
+    id: app
+    attributes:
+      label: Which app?
+      options:
+        - 234 Writer
+        - 234 Sheet
+        - 234 Slides
+        - Shared / design system
+        - Other / cross-cutting
+    validations:
+      required: true
+  - type: textarea
+    id: pain
+    attributes:
+      label: What pain point does this address?
+      description: The problem or friction this would fix — for whom, and when.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What you'd like to see happen.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches you weighed, if any.
+    validations:
+      required: false

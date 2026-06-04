@@ -67,6 +67,9 @@ detail lives in `CLAUDE.md`; the essentials:
 - **Commit messages**: a concise imperative summary line, optionally
   `area: summary` (e.g. `feat(sheet): …`), with a body explaining what and why.
 - Keep PRs green: typecheck, lint, test, and the relevant benchmark gate.
+- Issues and PRs use the templates in `.github/`. New issues are labelled
+  `needs-triage`; see the [issue triage workflow](./triage.md) for the label
+  scheme and flow.
 
 ## Contributing a 234 Slides template
 
