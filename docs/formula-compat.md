@@ -26,7 +26,9 @@
 | `IF` | Supported | `IF(cond, then[, else])` — **lazy** branches (untaken branch not evaluated) |
 | `AND`, `OR`, `NOT` | Supported | Nonzero is true; return 1/0 |
 | `ABS`, `INT`, `SQRT`, `POWER`, `MOD`, `ROUND` | Supported | Scalar math; `ROUND(x, digits=0)`; `MOD`/`SQRT` error on invalid input |
-| `COUNTIF`, `SUMIF`, `AVERAGEIF` | Supported | `(range, criteria[, sum_range])`; criteria is a comparison (`>10`, `<>0`) or a value (exact match) — not Excel's quoted-string criteria |
+| `COUNTIF`, `SUMIF`, `AVERAGEIF` | Supported | `(range, criteria[, sum_range])`; criteria is a comparison (`>10`, `<>0`), a value, or text (`"apple"`) |
+| Text: string literals, `&` concat, comparisons | Supported | Values are `number \| string`; string comparisons are case-insensitive; mixed types rank number < text |
+| `CONCAT`, `CONCATENATE`, `LEN`, `UPPER`, `LOWER`, `TRIM`, `LEFT`, `RIGHT` | Supported | Text functions |
 | Cell / range references | Supported | Stored as named refs / coordinates; A1 display-only (see `formula-refs.md`) |
 | Error codes | Supported | `#DIV/0!`, `#NAME?` (unknown fn), `#NUM!`, `#CYCLE!`, `#VALUE!`, `#ERROR!` |
 
@@ -37,7 +39,7 @@ Performance: evaluating 10,000 formula cells is gated under 500ms (root §8).
 | Function group | 234 Sheet phase |
 |---|---|
 | `VLOOKUP`, `HLOOKUP`, `INDEX`, `MATCH`, `XLOOKUP` | Phase 2+ |
-| `CONCATENATE`, `CONCAT`, `TEXTJOIN` | Phase 2+ |
+| `TEXTJOIN`, `MID`, `SUBSTITUTE`, `FIND` | Phase 2+ |
 | `DATE`, `TODAY`, `NOW`, `DATEDIF` | Phase 2+ (with explicit date columns — no coercion, §2.2) |
 | Dynamic arrays / spill (`FILTER`, `SORT`, `UNIQUE`) | Phase 2+ |
 

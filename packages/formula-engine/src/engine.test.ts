@@ -135,6 +135,20 @@ describe('SheetEngine', () => {
     expect(engine.getValue(4, 2)).toBe(20);
   });
 
+  it('handles text cells: concatenation, SUM ignores text, string results', () => {
+    engine = new SheetEngine();
+    engine.setCell(0, 0, 'hello'); // A1 (text)
+    engine.setCell(1, 0, '10'); // A2 (number)
+    engine.setCell(2, 0, '20'); // A3 (number)
+    engine.setCell(0, 1, '=A1 & " world"'); // B1 → "hello world"
+    engine.setCell(1, 1, '=SUM(A1:A3)'); // B2 → 30 (text ignored)
+    engine.setCell(2, 1, '=UPPER(A1)'); // B3 → "HELLO"
+
+    expect(engine.getValue(0, 1)).toBe('hello world');
+    expect(engine.getValue(1, 1)).toBe(30);
+    expect(engine.getValue(2, 1)).toBe('HELLO');
+  });
+
   it('evaluates ad-hoc expressions via evaluate() (for rule predicates)', () => {
     engine = new SheetEngine();
     engine.setCell(0, 0, '5'); // A1

@@ -65,3 +65,35 @@ describe('logical + math functions', () => {
     expect(() => evalNum('NOPE(1)')).toThrow('#NAME?');
   });
 });
+
+describe('text values', () => {
+  it('parses string literals (with "" escape) and concatenates with &', () => {
+    expect(evalNum('"hello"')).toBe('hello');
+    expect(evalNum('"a ""b"" c"')).toBe('a "b" c');
+    expect(evalNum('"a" & "b"')).toBe('ab');
+    expect(evalNum('"n=" & 5')).toBe('n=5'); // number coerced to text
+  });
+
+  it('runs text functions', () => {
+    expect(evalNum('CONCAT("a", "b", "c")')).toBe('abc');
+    expect(evalNum('CONCATENATE("x", 1)')).toBe('x1');
+    expect(evalNum('LEN("hello")')).toBe(5);
+    expect(evalNum('UPPER("ab")')).toBe('AB');
+    expect(evalNum('LOWER("AB")')).toBe('ab');
+    expect(evalNum('TRIM("  a   b ")')).toBe('a b');
+    expect(evalNum('LEFT("hello", 2)')).toBe('he');
+    expect(evalNum('RIGHT("hello", 3)')).toBe('llo');
+  });
+
+  it('compares strings (case-insensitive); mixed types rank number < text', () => {
+    expect(evalNum('"apple" < "banana"')).toBe(1);
+    expect(evalNum('"ABC" = "abc"')).toBe(1); // case-insensitive equality
+    expect(evalNum('"abc" <> "abd"')).toBe(1);
+    expect(evalNum('5 < "a"')).toBe(1); // a number ranks below text
+  });
+
+  it('coerces numeric strings in arithmetic but errors on real text', () => {
+    expect(evalNum('"3" + 4')).toBe(7);
+    expect(() => evalNum('"abc" + 1')).toThrow('#VALUE!');
+  });
+});

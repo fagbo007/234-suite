@@ -2,21 +2,27 @@ import { a1ToCell } from './a1';
 
 /**
  * Minimal, dependency-free (MIT) formula evaluator. Replaces HyperFormula
- * (GPLv3) so the suite stays cleanly MIT. Supports:
+ * (GPLv3) so the suite stays cleanly MIT. Values are `number | string`
+ * (booleans are numeric: TRUE = 1, FALSE = 0). Supports:
  *  - arithmetic (`+ - * / ^`, parens, unary minus) and ranges
- *  - comparisons (`= <> < <= > >=`) — booleans are numeric (TRUE=1, FALSE=0)
+ *  - text: string literals (`"..."`), `&` concatenation, string comparisons
+ *  - comparisons (`= <> < <= > >=`) — numeric, or lexicographic for text
  *  - functions: SUM / AVERAGE / COUNT / MIN / MAX, IF (lazy branches),
  *    AND / OR / NOT, ABS / INT / SQRT / POWER / MOD / ROUND,
- *    COUNTIF / SUMIF / AVERAGEIF (criteria = a comparison like `>10` or a value)
- * Further breadth (SUMIF, lookups, text, dates, arrays) stays planned — see
+ *    COUNTIF / SUMIF / AVERAGEIF, and text: CONCAT / CONCATENATE / LEN /
+ *    UPPER / LOWER / TRIM / LEFT / RIGHT
+ * Further breadth (lookups, dates, arrays) stays planned — see
  * docs/formula-compat.md; unknown functions return `#NAME?` (never guessed).
  *
  * Errors are thrown as `Error` whose message is an Excel-style code
  * (`#DIV/0!`, `#NAME?`, `#NUM!`, `#VALUE!`, `#ERROR!`); the engine surfaces it.
  */
 
-/** Resolve a cell to its numeric value, or null when the cell is empty. */
-export type CellResolver = (row: number, col: number) => number | null;
+/** A formula value: a number or a string (booleans are numeric 1/0). */
+export type FormulaValue = number | string;
+
+/** Resolve a cell to its value (number or string), or null when empty. */
+export type CellResolver = (row: number, col: number) => FormulaValue | null;
 
 /**
  * Resolve a reference token to coordinates. The engine injects one that checks
@@ -30,8 +36,78 @@ function defaultRefResolver(ref: string): [number, number] {
   return [row, col];
 }
 
+// --- value coercion (Excel-style) ---
+
+/** Coerce to a number for arithmetic: empty/'' → 0; numeric string → number; else #VALUE!. */
+function toNumber(v: FormulaValue | null): number {
+  if (v === null) return 0;
+  if (typeof v === 'number') return v;
+  const t = v.trim();
+  if (t === '') return 0;
+  const n = Number(t);
+  if (Number.isFinite(n)) return n;
+  throw new Error('#VALUE!');
+}
+
+/** Coerce to text for concatenation: null → ''; number → its string. */
+function toText(v: FormulaValue | null): string {
+  if (v === null) return '';
+  return typeof v === 'number' ? String(v) : v;
+}
+
+function orderNum(x: number, op: string, y: number): boolean {
+  switch (op) {
+    case '=':
+      return x === y;
+    case '<>':
+      return x !== y;
+    case '<':
+      return x < y;
+    case '<=':
+      return x <= y;
+    case '>':
+      return x > y;
+    case '>=':
+      return x >= y;
+    default:
+      throw new Error('#ERROR!');
+  }
+}
+
+function orderStr(x: string, op: string, y: string): boolean {
+  switch (op) {
+    case '=':
+      return x === y;
+    case '<>':
+      return x !== y;
+    case '<':
+      return x < y;
+    case '<=':
+      return x <= y;
+    case '>':
+      return x > y;
+    case '>=':
+      return x >= y;
+    default:
+      throw new Error('#ERROR!');
+  }
+}
+
+/**
+ * Compare two values. Both numbers → numeric; both strings → case-insensitive
+ * lexicographic; mixed → a number always ranks below text (Excel).
+ */
+function compareValues(a: FormulaValue, op: string, b: FormulaValue): boolean {
+  if (typeof a === 'number' && typeof b === 'number') return orderNum(a, op, b);
+  if (typeof a === 'string' && typeof b === 'string') {
+    return orderStr(a.toLowerCase(), op, b.toLowerCase());
+  }
+  return orderNum(typeof a === 'number' ? 0 : 1, op, typeof b === 'number' ? 0 : 1);
+}
+
 type Token =
   | { type: 'num'; value: string }
+  | { type: 'str'; value: string }
   | { type: 'ident'; value: string }
   | { type: 'op'; value: string }
   | { type: 'lparen' }
@@ -51,12 +127,32 @@ function tokenize(src: string): Token[] {
       while (j < src.length && /[0-9.]/.test(src[j]!)) j++;
       tokens.push({ type: 'num', value: src.slice(i, j) });
       i = j;
+    } else if (ch === '"') {
+      // String literal; "" is an escaped quote.
+      let j = i + 1;
+      let str = '';
+      while (j < src.length) {
+        if (src[j] === '"') {
+          if (src[j + 1] === '"') {
+            str += '"';
+            j += 2;
+          } else {
+            j++;
+            break;
+          }
+        } else {
+          str += src[j];
+          j++;
+        }
+      }
+      tokens.push({ type: 'str', value: str });
+      i = j;
     } else if (/[A-Za-z]/.test(ch)) {
       let j = i + 1;
       while (j < src.length && /[A-Za-z0-9]/.test(src[j]!)) j++;
       tokens.push({ type: 'ident', value: src.slice(i, j) });
       i = j;
-    } else if ('+-*/^'.includes(ch)) {
+    } else if ('+-*/^&'.includes(ch)) {
       tokens.push({ type: 'op', value: ch });
       i++;
     } else if (ch === '<' || ch === '>' || ch === '=') {
@@ -90,33 +186,13 @@ function tokenize(src: string): Token[] {
   return tokens;
 }
 
-/** Compare two numbers; booleans are represented numerically (TRUE=1, FALSE=0). */
-function compare(a: number, op: string, b: number): boolean {
-  switch (op) {
-    case '=':
-      return a === b;
-    case '<>':
-      return a !== b;
-    case '<':
-      return a < b;
-    case '<=':
-      return a <= b;
-    case '>':
-      return a > b;
-    case '>=':
-      return a >= b;
-    default:
-      throw new Error('#ERROR!');
-  }
-}
-
-function applyFunction(name: string, values: (number | null)[]): number {
-  const nums = () => values.filter((v): v is number => v !== null);
+function applyFunction(name: string, values: (FormulaValue | null)[]): FormulaValue {
+  const nums = () => values.filter((v): v is number => typeof v === 'number');
   switch (name) {
     case 'SUM':
-      return values.reduce((acc: number, v) => acc + (v ?? 0), 0);
+      return nums().reduce((a, b) => a + b, 0);
     case 'COUNT':
-      return values.filter((v) => v !== null).length;
+      return nums().length;
     case 'AVERAGE': {
       const n = nums();
       if (n.length === 0) throw new Error('#DIV/0!');
@@ -132,33 +208,55 @@ function applyFunction(name: string, values: (number | null)[]): number {
     }
     // Logical — nonzero is true. IF is handled lazily in the parser.
     case 'AND':
-      return values.every((v) => (v ?? 0) !== 0) ? 1 : 0;
+      return values.every((v) => toNumber(v) !== 0) ? 1 : 0;
     case 'OR':
-      return values.some((v) => (v ?? 0) !== 0) ? 1 : 0;
+      return values.some((v) => toNumber(v) !== 0) ? 1 : 0;
     case 'NOT':
-      return (values[0] ?? 0) === 0 ? 1 : 0;
-    // Scalar math — positional arguments (a range flattens; the first value is used).
+      return toNumber(values[0] ?? 0) === 0 ? 1 : 0;
+    // Scalar math — positional arguments.
     case 'ABS':
-      return Math.abs(values[0] ?? 0);
+      return Math.abs(toNumber(values[0] ?? 0));
     case 'INT':
-      return Math.floor(values[0] ?? 0);
+      return Math.floor(toNumber(values[0] ?? 0));
     case 'SQRT': {
-      const x = values[0] ?? 0;
+      const x = toNumber(values[0] ?? 0);
       if (x < 0) throw new Error('#NUM!');
       return Math.sqrt(x);
     }
     case 'POWER':
-      return Math.pow(values[0] ?? 0, values[1] ?? 0);
+      return Math.pow(toNumber(values[0] ?? 0), toNumber(values[1] ?? 0));
     case 'MOD': {
-      const a = values[0] ?? 0;
-      const b = values[1] ?? 0;
+      const a = toNumber(values[0] ?? 0);
+      const b = toNumber(values[1] ?? 0);
       if (b === 0) throw new Error('#DIV/0!');
       return ((a % b) + b) % b; // Excel: result takes the divisor's sign
     }
     case 'ROUND': {
-      const x = values[0] ?? 0;
-      const f = Math.pow(10, Math.trunc(values[1] ?? 0));
+      const x = toNumber(values[0] ?? 0);
+      const f = Math.pow(10, Math.trunc(toNumber(values[1] ?? 0)));
       return Math.round(x * f) / f;
+    }
+    // Text functions.
+    case 'CONCAT':
+    case 'CONCATENATE':
+      return values.map(toText).join('');
+    case 'LEN':
+      return toText(values[0] ?? '').length;
+    case 'UPPER':
+      return toText(values[0] ?? '').toUpperCase();
+    case 'LOWER':
+      return toText(values[0] ?? '').toLowerCase();
+    case 'TRIM':
+      return toText(values[0] ?? '').replace(/\s+/g, ' ').trim();
+    case 'LEFT': {
+      const s = toText(values[0] ?? '');
+      const n = Math.max(0, Math.trunc(toNumber(values[1] ?? 1)));
+      return s.slice(0, n);
+    }
+    case 'RIGHT': {
+      const s = toText(values[0] ?? '');
+      const n = Math.max(0, Math.trunc(toNumber(values[1] ?? 1)));
+      return s.slice(s.length - n);
     }
     default:
       throw new Error('#NAME?'); // unsupported function — never guess (Section 3.3)
@@ -189,79 +287,91 @@ class Parser {
 
   private static readonly COMPARATORS = new Set(['=', '<', '>', '<=', '>=', '<>']);
 
-  parse(): number {
+  parse(): FormulaValue {
     const value = this.comparison();
     if (this.pos !== this.tokens.length) throw new Error('#ERROR!');
     return value;
   }
 
   /** Lowest precedence: comparisons yield 1 (true) or 0 (false). */
-  private comparison(): number {
-    let left = this.expression();
+  private comparison(): FormulaValue {
+    let left = this.concat();
     let token = this.peek();
     while (token?.type === 'op' && Parser.COMPARATORS.has(token.value)) {
       const op = token.value;
       this.next();
-      const right = this.expression();
-      left = compare(left, op, right) ? 1 : 0;
+      const right = this.concat();
+      left = compareValues(left, op, right) ? 1 : 0;
       token = this.peek();
     }
     return left;
   }
 
-  private expression(): number {
+  /** Text concatenation `&` — below comparison, above additive (Excel). */
+  private concat(): FormulaValue {
+    let left = this.expression();
+    let token = this.peek();
+    while (token?.type === 'op' && token.value === '&') {
+      this.next();
+      left = toText(left) + toText(this.expression());
+      token = this.peek();
+    }
+    return left;
+  }
+
+  private expression(): FormulaValue {
     let left = this.term();
     let token = this.peek();
     while (token?.type === 'op' && (token.value === '+' || token.value === '-')) {
       this.next();
       const right = this.term();
-      left = token.value === '+' ? left + right : left - right;
+      left = token.value === '+' ? toNumber(left) + toNumber(right) : toNumber(left) - toNumber(right);
       token = this.peek();
     }
     return left;
   }
 
-  private term(): number {
+  private term(): FormulaValue {
     let left = this.power();
     let token = this.peek();
     while (token?.type === 'op' && (token.value === '*' || token.value === '/')) {
       this.next();
-      const right = this.power();
+      const right = toNumber(this.power());
       if (token.value === '/') {
         if (right === 0) throw new Error('#DIV/0!');
-        left = left / right;
+        left = toNumber(left) / right;
       } else {
-        left = left * right;
+        left = toNumber(left) * right;
       }
       token = this.peek();
     }
     return left;
   }
 
-  private power(): number {
+  private power(): FormulaValue {
     const base = this.unary();
     const token = this.peek();
     if (token?.type === 'op' && token.value === '^') {
       this.next();
-      return Math.pow(base, this.power());
+      return Math.pow(toNumber(base), toNumber(this.power()));
     }
     return base;
   }
 
-  private unary(): number {
+  private unary(): FormulaValue {
     const token = this.peek();
     if (token?.type === 'op' && token.value === '-') {
       this.next();
-      return -this.unary();
+      return -toNumber(this.unary());
     }
     if (token?.type === 'op' && token.value === '+') {
       this.next();
-      return this.unary();
+      return toNumber(this.unary());
     }
     return this.primary();
   }
 
-  private primary(): number {
+  private primary(): FormulaValue {
     const token = this.peek();
     if (!token) throw new Error('#ERROR!');
 
@@ -271,9 +381,13 @@ class Parser {
       if (!Number.isFinite(n)) throw new Error('#ERROR!');
       return n;
     }
+    if (token.type === 'str') {
+      this.next();
+      return token.value;
+    }
     if (token.type === 'lparen') {
       this.next();
-      const value = this.expression();
+      const value = this.comparison();
       if (this.peek()?.type !== 'rparen') throw new Error('#ERROR!');
       this.next();
       return value;
@@ -281,19 +395,19 @@ class Parser {
     if (token.type === 'ident') {
       if (this.at(1)?.type === 'lparen') return this.functionCall(token.value.toUpperCase());
       this.next();
-      return this.resolve(...this.coord(token.value)) ?? 0;
+      return this.resolve(...this.coord(token.value)) ?? 0; // empty cell → 0
     }
     throw new Error('#ERROR!');
   }
 
-  private functionCall(name: string): number {
+  private functionCall(name: string): FormulaValue {
     this.next(); // ident
     this.next(); // lparen
     if (name === 'IF') return this.ifCall();
     if (name === 'COUNTIF' || name === 'SUMIF' || name === 'AVERAGEIF') {
       return this.conditionalAggregate(name);
     }
-    const values: (number | null)[] = [];
+    const values: (FormulaValue | null)[] = [];
     if (this.peek()?.type !== 'rparen') {
       do {
         this.argument(values);
@@ -308,8 +422,8 @@ class Parser {
    * IF(cond, then[, else]) with **lazy** branches: only the taken branch is
    * evaluated, so `=IF(A1=0, 0, 1/A1)` never raises #DIV/0! when A1 is 0.
    */
-  private ifCall(): number {
-    const cond = this.comparison();
+  private ifCall(): FormulaValue {
+    const cond = toNumber(this.comparison());
     this.expectComma();
     const thenStart = this.pos;
     this.skipArg();
@@ -322,7 +436,7 @@ class Parser {
     if (this.peek()?.type !== 'rparen') throw new Error('#ERROR!');
     const end = this.pos;
 
-    let result: number;
+    let result: FormulaValue;
     if (cond !== 0) {
       this.pos = thenStart;
       result = this.comparison();
@@ -356,19 +470,19 @@ class Parser {
     }
   }
 
-  private argument(values: (number | null)[]): void {
+  private argument(values: (FormulaValue | null)[]): void {
     for (const v of this.rangeValues()) values.push(v);
   }
 
   /** Read one argument as a flat value list: a range `A1:B2` expands; else a scalar. */
-  private rangeValues(): (number | null)[] {
+  private rangeValues(): (FormulaValue | null)[] {
     const token = this.peek();
     if (token?.type === 'ident' && this.at(1)?.type === 'colon' && this.at(2)?.type === 'ident') {
       const startToken = this.next() as Token & { value: string };
       this.next(); // colon
       const endToken = this.next() as Token & { value: string };
       const [r0c0, r1c1] = [this.coord(startToken.value), this.coord(endToken.value)];
-      const values: (number | null)[] = [];
+      const values: (FormulaValue | null)[] = [];
       for (let r = Math.min(r0c0[0], r1c1[0]); r <= Math.max(r0c0[0], r1c1[0]); r++) {
         for (let c = Math.min(r0c0[1], r1c1[1]); c <= Math.max(r0c0[1], r1c1[1]); c++) {
           values.push(this.resolve(r, c));
@@ -381,15 +495,15 @@ class Parser {
 
   /**
    * COUNTIF / SUMIF / AVERAGEIF: `(range, criteria[, sum_range])`. Criteria is a
-   * comparison (`>10`, `<>0`) or a bare value (exact match) — our numeric-only
+   * comparison (`>10`, `<>0`), a value (exact match), or text (`"apple"`) — our
    * equivalent of Excel's quoted string criteria. SUMIF/AVERAGEIF sum/average the
    * aligned `sum_range` (or `range`) where the criteria matches.
    */
-  private conditionalAggregate(name: string): number {
+  private conditionalAggregate(name: string): FormulaValue {
     const range = this.rangeValues();
     this.expectComma();
     const { op, threshold } = this.parseCriteria();
-    let sumRange: (number | null)[] | null = null;
+    let sumRange: (FormulaValue | null)[] | null = null;
     if (this.peek()?.type === 'comma') {
       this.next();
       sumRange = this.rangeValues();
@@ -399,19 +513,22 @@ class Parser {
 
     const matched: number[] = [];
     range.forEach((v, i) => {
-      if (v !== null && compare(v, op, threshold)) matched.push(i);
+      if (v !== null && compareValues(v, op, threshold)) matched.push(i);
     });
     if (name === 'COUNTIF') return matched.length;
 
     const source = sumRange ?? range;
-    const picked = matched.map((i) => source[i] ?? 0);
+    const picked = matched.map((i) => {
+      const s = source[i];
+      return typeof s === 'number' ? s : 0; // sum/average ignore non-numeric
+    });
     if (name === 'SUMIF') return picked.reduce((a, b) => a + b, 0);
     if (picked.length === 0) throw new Error('#DIV/0!'); // AVERAGEIF
     return picked.reduce((a, b) => a + b, 0) / picked.length;
   }
 
   /** Parse a criteria argument: an optional comparator then a threshold expression. */
-  private parseCriteria(): { op: string; threshold: number } {
+  private parseCriteria(): { op: string; threshold: FormulaValue } {
     const token = this.peek();
     let op = '=';
     if (token?.type === 'op' && Parser.COMPARATORS.has(token.value)) {
@@ -430,6 +547,6 @@ export function evaluateFormula(
   source: string,
   resolve: CellResolver,
   resolveRef?: RefResolver,
-): number {
+): FormulaValue {
   return new Parser(source, resolve, resolveRef).parse();
 }

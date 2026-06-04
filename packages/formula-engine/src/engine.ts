@@ -142,7 +142,7 @@ export class SheetEngine {
     const raw = formula.startsWith('=') ? formula.slice(1) : formula;
     if (raw.trim() === '') return null;
     try {
-      return evaluateFormula(raw, (r, c) => this.computeNumeric(r, c, new Set()), this.resolveRef);
+      return evaluateFormula(raw, (r, c) => this.computeValue(r, c, new Set()), this.resolveRef);
     } catch (error) {
       const message = error instanceof Error ? error.message : '';
       return ERROR_CODE.test(message) ? message : '#ERROR!';
@@ -206,7 +206,7 @@ export class SheetEngine {
     try {
       return evaluateFormula(
         raw.slice(1),
-        (r, c) => this.computeNumeric(r, c, visiting),
+        (r, c) => this.computeValue(r, c, visiting),
         this.resolveRef,
       );
     } catch (error) {
@@ -217,14 +217,17 @@ export class SheetEngine {
     }
   }
 
-  private computeNumeric(row: number, col: number, visiting: Set<string>): number | null {
+  /**
+   * Resolve a cell to a formula value: numeric text → number, other text →
+   * string, booleans → 1/0, empty → null. Error codes propagate as throws.
+   */
+  private computeValue(row: number, col: number, visiting: Set<string>): number | string | null {
     const value = this.compute(row, col, visiting);
     if (value === null) return null;
     if (typeof value === 'number') return value;
     if (typeof value === 'boolean') return value ? 1 : 0;
     if (ERROR_CODE.test(value)) throw new Error(value); // propagate the error code
     const n = Number(value);
-    if (value.trim() !== '' && Number.isFinite(n)) return n;
-    throw new Error('#VALUE!');
+    return value.trim() !== '' && Number.isFinite(n) ? n : value; // numeric text → number
   }
 }
