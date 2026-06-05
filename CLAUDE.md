@@ -996,6 +996,22 @@ Format: `YYYY-MM-DD | Decision | Rationale | Alternatives considered`
              history-correct); keep CollabPanel per-app (rejected — §4 dup). Live
              in-editor cursor presence is wired (yCursorPlugin) but cursor UI
              polish + a real two-peer edit are deferred/manual.
+
+2026-06-05 | Slides collaboration (final app — collab now live in all three):
+             apps/slides/src/collab/ — bindDeck(doc, onRemoteChange) maps the deck
+             slide-granularly (a Y.Map keyed by slide id → JSON of the Slide + a
+             Y.Array of ids for order; LOCAL-origin echo guard; remote detection
+             via doc.onUpdate) + useSlidesCollab (session lifecycle). App syncs via
+             a single [deck] effect (push) + a guarded remote setDeck — no setDeck
+             call site changed. |
+             Completes the collaboration workstream while keeping it optional/off;
+             convergence proven deterministically (add/edit/reorder/delete +
+             late-join seed) via the in-memory network. |
+             Alternatives: full object-level nested CRDT within a slide (deferred —
+             slide-granular is the pragmatic first cut; within-slide concurrent
+             edits are last-write-wins per slide); whole-deck JSON LWW (rejected —
+             no cross-slide merge). Object-level CRDT, presence cursors, and a real
+             two-peer edit are deferred/manual.
 ```
 
 ---

@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@234/ai-sidebar": "workspace:*",
+    "@234/collab": "workspace:*",
     "@234/compat": "workspace:*",
     "@234/shared": "workspace:*",
     "@tabler/icons-react": "^3.26.0",

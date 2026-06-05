@@ -100,9 +100,20 @@ cross-peer WebRTC/relay sync is validated manually across instances.
   promoted **`CollabPanel`** in `@234/shared`. `y-prosemirror` + `yjs` are pinned
   to match `@234/collab` (single Yjs instance — proven by the fragment-convergence
   test). Cursor-presence UI styling is deferred.
-- **Slides** — `Y.Array`/`Y.Map` ↔ the deck model.
-- Presence cursors, permissions, conflict-UX polish; serverless LAN (mDNS)
-  discovery; deploying the relay as a service.
+- **Slides — DONE.** `apps/slides/src/collab/`: `bindDeck(doc, onRemoteChange)`
+  maps the deck slide-granularly — a `Y.Map` keyed by slide id → JSON of the
+  `Slide`, plus a `Y.Array` of ids for order; `useSlidesCollab` owns the session.
+  App syncs via a single `[deck]` effect (push) + a guarded remote `setDeck`, so
+  no `setDeck` call site changed. Edits to different slides merge; **within-slide
+  concurrent edits are last-write-wins per slide** (object-level CRDT is a future
+  enhancement).
+- Presence cursors, permissions, conflict-UX polish; object-level (within-slide)
+  CRDT; serverless LAN (mDNS) discovery; deploying the relay as a service;
+  unifying the Writer/Slides session hooks.
+
+> **Collaboration is now live in all three apps** (Sheet · Writer · Slides) on the
+> shared `@234/collab` core + relay. Real cross-peer sync over WebRTC/relay is the
+> remaining manual, multi-instance verification step.
 
 ## References
 

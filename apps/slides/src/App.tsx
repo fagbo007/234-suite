@@ -2,6 +2,7 @@ import { AiActionPanel, AiSettings, AiSidebar, useAiSettings, useAiSidebar } fro
 import { exportPptx, importPptx, type ImportReport } from '@234/compat';
 import {
   Button,
+  CollabPanel,
   CommandPalette,
   ImportReportPanel,
   registerCommand,
@@ -11,6 +12,8 @@ import {
 import { type ChangeEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { slidesActions } from './ai/slidesActions';
 import { AnimationPanel } from './anim/AnimationPanel';
+import { bindDeck, type DeckBinding } from './collab/bindDeck';
+import { useSlidesCollab } from './collab/useSlidesCollab';
 import { modelToPptxDeck, pptxDeckToModel } from './compat/pptxMap';
 import styles from './App.module.css';
 import { SlideCanvas } from './canvas/SlideCanvas';
@@ -26,7 +29,7 @@ import {
   tidySlide,
   updateObject,
 } from './model/deck';
-import { type SlideObject } from './model/types';
+import { type Deck, type SlideObject } from './model/types';
 import { NotesPanel } from './notes/NotesPanel';
 import { SlidePanel } from './panel/SlidePanel';
 import { PresenterMode } from './presenter/PresenterMode';
@@ -54,10 +57,43 @@ export default function App() {
   const { settings: aiSettings, setSettings: setAiSettings, provider: aiProvider } = useAiSettings();
   const [importReport, setImportReport] = useState<ImportReport | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const collab = useSlidesCollab();
+  const [collabOpen, setCollabOpen] = useState(false);
+  const bindingRef = useRef<DeckBinding | null>(null);
+  const applyingRemoteRef = useRef(false);
 
   // Latest state for palette command closures (registered once on mount).
   const stateRef = useRef({ deck, activeIndex });
   stateRef.current = { deck, activeIndex };
+
+  // Collaboration: bind the deck to the shared doc while a session is active.
+  // Remote changes apply via setDeck behind a guard; local changes are pushed by
+  // the [deck] effect below. Off by default — solo editing is unchanged.
+  const collabDoc = collab.doc;
+  const collabRole = collab.role;
+  useEffect(() => {
+    if (!collabDoc) return;
+    const binding = bindDeck(collabDoc, (remote: Deck) => {
+      applyingRemoteRef.current = true;
+      setDeck(remote);
+      setActiveIndex((i) => (remote.slides.length === 0 ? 0 : Math.min(i, remote.slides.length - 1)));
+    });
+    bindingRef.current = binding;
+    if (collabRole === 'host') binding.seed(stateRef.current.deck);
+    return () => {
+      binding.destroy();
+      bindingRef.current = null;
+    };
+  }, [collabDoc, collabRole]);
+
+  useEffect(() => {
+    if (!bindingRef.current) return;
+    if (applyingRemoteRef.current) {
+      applyingRemoteRef.current = false;
+      return;
+    }
+    bindingRef.current.pushDeck(deck);
+  }, [deck]);
 
   const insert = useCallback((factory: () => SlideObject) => {
     setDeck((current) => {
@@ -145,6 +181,12 @@ export default function App() {
         group: 'View',
         run: () => setPresenting(true),
       }),
+      registerCommand({
+        id: 'slides.collaborate',
+        title: 'Collaborate',
+        group: 'Collaborate',
+        run: () => setCollabOpen(true),
+      }),
       registerCommand({ id: 'slides.ai', title: 'Toggle AI assistant', group: 'AI', run: () => ai.toggle() }),
       registerCommand({ id: 'slides.toggle-theme', title: 'Toggle theme', group: 'View', run: () => toggleTheme() }),
       registerCommand({ id: 'slides.about', title: 'About 234 Slides', group: 'Help', run: () => console.info('234 Slides — Phase 2') }),
@@ -211,6 +253,9 @@ export default function App() {
         <Button variant="ghost" onClick={ai.toggle}>
           AI assistant
         </Button>
+        <Button variant="ghost" onClick={() => setCollabOpen((open) => !open)}>
+          Collaborate
+        </Button>
         <Button variant="secondary" onClick={palette.open}>
           Command palette
         </Button>
@@ -225,6 +270,15 @@ export default function App() {
       />
       {importReport ? (
         <ImportReportPanel report={importReport} onClose={() => setImportReport(null)} />
+      ) : null}
+      {collabOpen ? (
+        <CollabPanel
+          active={collab.active}
+          code={collab.code}
+          onStart={collab.start}
+          onJoin={collab.join}
+          onLeave={collab.leave}
+        />
       ) : null}
       <div className={styles.workspace}>
         <SlidePanel
