@@ -72,4 +72,42 @@ describe('bindDeck', () => {
     expect(guest.slides.map((s) => s.id)).toEqual(['x', 'y']);
     expect(guest.slides[0]?.objects[0]?.id).toBe('o');
   });
+
+  it('merges concurrent edits to different objects on the same slide (object-level CRDT)', () => {
+    const net = createMemoryNetwork();
+    const d1 = new CollabDoc();
+    const d2 = new CollabDoc();
+    const b1 = bindDeck(d1, () => {});
+    const b2 = bindDeck(d2, () => {});
+    const t1 = net.transport();
+    const t2 = net.transport();
+    t1.connect(d1, 'r');
+    t2.connect(d2, 'r');
+
+    // Both peers start from the same slide with two objects at x=0.
+    const base: Deck = {
+      slides: [{ id: 's1', objects: [{ ...text('o1'), x: 0 }, { ...text('o2'), x: 0 }] }],
+    };
+    b1.pushDeck(base);
+
+    // Peer 2 goes offline; each peer moves a DIFFERENT object on that slide.
+    t2.disconnect();
+    b1.pushDeck({
+      slides: [{ id: 's1', objects: [{ ...text('o1'), x: 100 }, { ...text('o2'), x: 0 }] }],
+    });
+    b2.pushDeck({
+      slides: [{ id: 's1', objects: [{ ...text('o1'), x: 0 }, { ...text('o2'), x: 200 }] }],
+    });
+
+    // Reconnect → both edits survive on both peers (no whole-slide clobber).
+    t2.connect(d2, 'r');
+
+    for (const read of [b1.readDeck(), b2.readDeck()]) {
+      const objects = read.slides[0]?.objects ?? [];
+      const o1 = objects.find((o) => o.id === 'o1');
+      const o2 = objects.find((o) => o.id === 'o2');
+      expect(o1?.x).toBe(100);
+      expect(o2?.x).toBe(200);
+    }
+  });
 });

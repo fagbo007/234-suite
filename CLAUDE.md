@@ -1047,6 +1047,22 @@ Format: `YYYY-MM-DD | Decision | Rationale | Alternatives considered`
              end hooks (deferred by owner — post-edit rules run via pre-commit/
              `pnpm checks`); benchmark-regression commit gate (needs baselines —
              bench runs via `pnpm bench:*`/CI instead).
+
+2026-06-05 | Slides collab upgraded to OBJECT-LEVEL CRDT (was slide-granular LWW):
+             apps/slides/src/collab/bindDeck.ts now maps the deck to nested Yjs —
+             order Y.Array<slideId> + slides Y.Map<slideId → slideMap{notes,
+             objectOrder Y.Array, objects Y.Map<objId → JSON(object)>}>. Each object
+             is its own map entry, so concurrent edits to different objects on the
+             same slide MERGE instead of clobbering. The binding's public interface
+             (pushDeck/readDeck/seed/destroy) is unchanged → App/useSlidesCollab/
+             CollabPanel untouched. |
+             Delivers backlog A4 with a contained, verifiable change (one file +
+             tests); a new offline-edit-then-reconnect test proves the merge. |
+             Alternatives: field-level (per-scalar Y.Map) merge within an object
+             (deferred — object is a JSON blob / per-object LWW, a sensible next
+             refinement); keep slide-granular (rejected — A4 goal). syncOrder only
+             rewrites a Y.Array when its sequence changed, avoiding spurious order
+             conflicts when peers leave ordering untouched.
 ```
 
 ---
