@@ -18,6 +18,8 @@ export default tseslint.config(
       'apps/slides/templates/scaffold.mjs',
       // Collaboration relay — standalone Node server, run manually.
       'packages/collab/relay/**',
+      // Repo tooling scripts (checks, session-start) — plain Node ESM.
+      'scripts/**',
     ],
   },
   js.configs.recommended,

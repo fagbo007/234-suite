@@ -1,0 +1,14 @@
+#!/bin/sh
+# Project 234 pre-commit (fast gates — root CLAUDE.md §12). The full unit-test
+# suite + template validation run in CI; this keeps local commits quick.
+# Enabled by `pnpm install` (sets core.hooksPath via the "prepare" script).
+set -e
+
+echo "pre-commit: content checks (§12)…"
+node scripts/checks.mjs
+
+echo "pre-commit: lint…"
+pnpm lint
+
+echo "pre-commit: typecheck…"
+pnpm typecheck

@@ -1027,6 +1027,26 @@ Format: `YYYY-MM-DD | Decision | Rationale | Alternatives considered`
              cargo unit tests verify it (the crate has no tauri dep, so it runs
              under plain `cargo test`). The lib's standalone Cargo.lock is
              gitignored (the apps' lockfiles govern its build).
+
+2026-06-05 | §12 hooks wired (owner choices: fast pre-commit; session-start-only
+             Claude hook). scripts/checks.mjs implements the static §12 content
+             rules — ERRORS (block): className in the Writer document schema, raw
+             A1 in the formula-engine storage layer (each narrowly targeted at the
+             one file it governs); WARNINGS: hardcoded hex in component CSS,
+             component .tsx without a sibling .test. .githooks/pre-commit runs
+             checks + lint + typecheck (the full test suite + validate:templates
+             stay in CI); `prepare` sets core.hooksPath on install. A SessionStart
+             hook in .claude/settings.json runs scripts/session-start.mjs (the §12
+             reminders + phase; GH issue counts skipped — no remote). docs/
+             architecture/hooks.md records what's enforced where. |
+             Enforces the rules the project rests on without slowing commits to a
+             crawl, and is honest that aria-label / general-className / A1-anywhere
+             need AST/review rather than a brittle regex. |
+             Alternatives: full §12 pre-commit running the whole test suite
+             (rejected by owner — too slow per commit); Claude post-edit + session-
+             end hooks (deferred by owner — post-edit rules run via pre-commit/
+             `pnpm checks`); benchmark-regression commit gate (needs baselines —
+             bench runs via `pnpm bench:*`/CI instead).
 ```
 
 ---
