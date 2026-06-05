@@ -45,16 +45,41 @@ lives under **Unreleased**.
   deterministic mock (default, no network) + a local Ollama provider; Writer
   (rephrase / summarise / explain / continue), Sheet (NL → formula / explain /
   suggest chart), and Slides (outline / layout / speaker notes). Cloud providers
-  and OS-keychain key storage are deferred to the Tauri window.
+  (Claude / OpenAI) + OS-keychain key storage landed once the native window built
+  (see below).
 - **MS Office round-trip** (`/packages/compat`, dependency-light via `fflate`):
   `.docx` ↔ Writer, `.xlsx` ↔ Sheet, `.pptx` ↔ Slides, each with a user-visible
   **import report** that logs fidelity losses (never silently mangles). Added a
   50-sample-per-format automated round-trip diff suite.
 
+### Native desktop, installers & collaboration
+
+- **Native Tauri windows** — all four apps (Writer / Sheet / Slides + a new **234
+  Launcher**) build and run on the Rust + MSVC toolchain. Each produces an
+  optimized `<app>.exe` (~8 MB) and an **NSIS installer** (~1.8–1.9 MB). The
+  Windows bundle target is NSIS, not MSI (WiX trips on spaced checkout paths).
+- **234 Suite single installer** (`installer/`) — one Windows installer lays all
+  four self-contained exes into `%LOCALAPPDATA%\234 Suite`, bootstraps WebView2
+  once, and adds a Start-menu folder. The launcher opens each app as an isolated
+  process (sibling-relative resolution); per-app installers remain available.
+- **Cloud AI + OS-keychain key storage (§6)** — Claude / OpenAI via a shared Rust
+  crate (`packages/ai-backend`): the API key is stored in the OS keychain and the
+  HTTPS call is made **in Rust**, so the key never enters JavaScript and never
+  hits plaintext. Default provider stays the offline mock; AI remains optional.
+- **Real-time collaboration (Yjs)** — a transport-agnostic core (`@234/collab`):
+  `CollabDoc`, human session codes, an in-memory test network + lazy WebRTC /
+  WebSocket transports, awareness, guarded local persistence, and a minimal relay
+  that stores nothing. Live in **all three apps** — Sheet (cells ↔ `Y.Map`),
+  Writer (`y-prosemirror` ↔ `Y.XmlFragment`), Slides (slide-granular `Y.Map` +
+  `Y.Array`). Opt-in and off by default; convergence proven by deterministic
+  in-memory tests.
+
 ### Notes
 
 - Performance gates (Writer < 200ms render, Sheet 60fps scroll, Slides < 3s
-  open) have held throughout.
-- Native desktop builds (Tauri window), cloud AI key storage, real-time
-  collaboration, and packaged installers are planned for later phases; see
-  `CLAUDE.md` §9 and the §17 decision log.
+  open, Sheet < 500ms / 10k formulas) have held throughout.
+- Verified here at the compile/unit level; the manual steps that need real
+  devices/network — a clean-machine suite install, a two-peer live collab edit,
+  and a real cloud-AI round-trip — are pending. Still planned (see `CLAUDE.md` §9
+  / §17): macOS/Linux installers, native file I/O, the AES-256 keychain fallback,
+  a working plugin loader, and a public repo + docs site.
