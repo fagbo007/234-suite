@@ -68,10 +68,13 @@ storage:
   unavailable the command errors rather than writing plaintext); transmitted only
   to the provider's own endpoint; 234 ships no default key; AI stays docked,
   user-invoked, optional (default provider is still offline `mock`).
-- **Deferred:** the §6 **AES-256 encrypted-file fallback** for keychain-less
-  systems (headless Linux without Secret Service). `keyring` covers the mainstream
-  platforms; until the fallback lands, such systems simply cannot store a cloud
-  key (never a plaintext write).
+- **AES-256 encrypted-file fallback (implemented):** on systems without an OS
+  keychain (e.g. headless Linux without Secret Service), `packages/ai-backend`
+  falls back to an **AES-256-GCM** encrypted file in the app data dir — a JSON map
+  of provider → (nonce ++ ciphertext), encrypted under a key derived from a
+  machine-specific id (SHA-256 of `machine-uid`). Storage is keychain-first; the
+  file is used only when the backend is unavailable. A key is therefore never
+  written in plaintext on any platform.
 
 The four rule bullets above continue to hold in Phase 3 and beyond.
 

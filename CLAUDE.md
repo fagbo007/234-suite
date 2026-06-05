@@ -1012,6 +1012,21 @@ Format: `YYYY-MM-DD | Decision | Rationale | Alternatives considered`
              edits are last-write-wins per slide); whole-deck JSON LWW (rejected —
              no cross-slide merge). Object-level CRDT, presence cursors, and a real
              two-peer edit are deferred/manual.
+
+2026-06-05 | RESOLVES the §6 AES-256 encrypted-file fallback deferral (from the
+             2026-06-04 cloud-AI entry): packages/ai-backend is now keychain-first
+             with an AES-256-GCM encrypted-file fallback for keychain-less systems
+             (e.g. headless Linux w/o Secret Service). set/get/delete try the
+             keychain and fall back to a JSON map (provider → nonce++ciphertext) in
+             the app data dir, encrypted under a key derived from a machine id
+             (SHA-256 of machine-uid). Keychain-unavailable is detected via
+             NoStorageAccess/PlatformFailure; the public API is unchanged. |
+             Honours §6 "never plaintext" on ALL platforms, not just keychain ones,
+             without changing the apps. |
+             Deps aes-gcm/sha2/machine-uid/dirs (MIT/Apache → suite stays MIT). 3
+             cargo unit tests verify it (the crate has no tauri dep, so it runs
+             under plain `cargo test`). The lib's standalone Cargo.lock is
+             gitignored (the apps' lockfiles govern its build).
 ```
 
 ---
