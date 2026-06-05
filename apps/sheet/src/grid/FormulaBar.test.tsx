@@ -32,4 +32,14 @@ describe('FormulaBar', () => {
     fireEvent.change(input, { target: { value: '=A1+1' } });
     expect(screen.getByRole('status').textContent).toContain('named reference');
   });
+
+  it('commits the typed value to the App on Enter (App owns the write)', () => {
+    engine = new SheetEngine();
+    const onCommit = vi.fn();
+    render(<FormulaBar engine={engine} active={{ row: 2, col: 1 }} onCommit={onCommit} />);
+    const input = screen.getByLabelText('Cell value or formula');
+    fireEvent.change(input, { target: { value: '=SUM(A1:A3)' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(onCommit).toHaveBeenCalledWith('=SUM(A1:A3)');
+  });
 });

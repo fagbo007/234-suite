@@ -960,6 +960,24 @@ Format: `YYYY-MM-DD | Decision | Rationale | Alternatives considered`
              kept the core a clean, fully-testable unit; Sheet/Writer/Slides
              bindings are named follow-up slices in collab.md). Real cross-peer
              WebRTC/relay sync + serverless LAN (mDNS) discovery are manual/future.
+
+2026-06-05 | Sheet collaboration binding + UI (first @234/collab consumer):
+             apps/sheet/src/collab/ — bindSheet(engine, doc) mirrors cells to a
+             Y.Map ("row,col" → raw text; formulas resolved locally; local edits
+             carry a LOCAL txn origin so the observer applies only remote changes;
+             emptied cell → delete; seedFromEngine for the host). useSheetCollab
+             owns the session (start/join/leave; default WebRTC peer, relay URL →
+             WebSocket; transportFactory injectable for tests). CollabPanel is the
+             docked Start/Join UI. App centralises writes in commitCell (binding
+             when a session is active, else engine) and FormulaBar now passes the
+             value up (App owns the write). Cells-only; named-range/column/chart
+             sync deferred. |
+             Makes collaboration usable in Sheet while keeping it optional/off by
+             default; the binding is proven deterministically via the slice-1
+             in-memory network (no real network in tests). |
+             Alternatives: route every engine.setCell call site individually
+             (rejected — one commitCell seam is cleaner). Real two-peer live edit
+             (two windows over WebRTC/relay) is a manual step.
 ```
 
 ---

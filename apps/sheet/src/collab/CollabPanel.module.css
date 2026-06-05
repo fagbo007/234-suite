@@ -1,0 +1,50 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-size-emphasis);
+  font-weight: var(--font-weight-medium);
+}
+
+.idle,
+.active {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.joinRow {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.hint {
+  margin: 0;
+  font-size: var(--font-size-meta);
+  color: var(--color-fg-secondary);
+}
+
+.code {
+  align-self: flex-start;
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--font-size-emphasis);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-interactive);
+  letter-spacing: 0.08em;
+}
+
+.error {
+  margin: 0;
+  font-size: var(--font-size-meta);
+  color: var(--color-danger);
+}

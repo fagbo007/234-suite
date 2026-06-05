@@ -83,7 +83,14 @@ cross-peer WebRTC/relay sync is validated manually across instances.
 
 ## Follow-up slices (per-app bindings + UI)
 
-- **Sheet** — `Y.Map` cells ↔ `SheetEngine`; "Start/Join session" + code panel.
+- **Sheet — DONE.** `apps/sheet/src/collab/`: `bindSheet(engine, doc)` mirrors
+  cells to a `Y.Map` (formulas as raw text, resolved locally; local edits tagged
+  with a `LOCAL` origin so the observer applies only remote changes);
+  `useSheetCollab` owns the session (start/join/leave, WebRTC by default or a
+  relay URL → WebSocket); `CollabPanel` is the docked Start/Join UI. The App
+  routes all cell writes through a `commitCell` that uses the binding when a
+  session is active. Cells-only for now — **named-range / column-type / chart
+  sync still pending**.
 - **Writer** — `y-prosemirror` ↔ the editor `Y.XmlFragment`.
 - **Slides** — `Y.Array`/`Y.Map` ↔ the deck model.
 - Presence cursors, permissions, conflict-UX polish; serverless LAN (mDNS)

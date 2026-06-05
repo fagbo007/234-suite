@@ -5,7 +5,9 @@ import { FormulaInput } from './FormulaInput';
 export interface FormulaBarProps {
   engine: SheetEngine;
   active: { row: number; col: number };
-  onCommit: () => void;
+  /** Commit the active cell's new raw content. The App owns the write so it can
+   *  route through the collaboration binding when a session is active. */
+  onCommit: (value: string) => void;
 }
 
 /** The cell formula bar — a `FormulaInput` bound to the active cell's raw content. */
@@ -17,8 +19,7 @@ export function FormulaBar({ engine, active, onCommit }: FormulaBarProps) {
   }, [engine, active]);
 
   const commit = () => {
-    engine.setCell(active.row, active.col, value);
-    onCommit();
+    onCommit(value);
   };
 
   return (

@@ -20,10 +20,12 @@ import { FormulaBar } from './grid/FormulaBar';
 import { Grid, type ColumnTypeMap } from './grid/Grid';
 import { NameBox } from './grid/NameBox';
 import { sheetActions } from './ai/sheetActions';
+import { CollabPanel } from './collab/CollabPanel';
+import { useSheetCollab } from './collab/useSheetCollab';
 import { LinkAuditor } from './inspector/LinkAuditor';
 import { RuleDialog } from './inspector/RuleDialog';
 
-type Panel = 'none' | 'column' | 'links' | 'chart' | 'conditional' | 'validation';
+type Panel = 'none' | 'column' | 'links' | 'chart' | 'conditional' | 'validation' | 'collab';
 
 export default function App() {
   const palette = useCommandPalette();
@@ -47,6 +49,17 @@ export default function App() {
   const { settings: aiSettings, setSettings: setAiSettings, provider: aiProvider } = useAiSettings();
   const [importReport, setImportReport] = useState<ImportReport | null>(null);
   const bump = useCallback(() => setRevision((value) => value + 1), []);
+
+  // Optional collaboration: when a session is active, cell edits flow through the
+  // shared Yjs doc; otherwise straight to the engine. Off by default (root §17).
+  const collab = useSheetCollab(engine, bump);
+  const commitCell = useCallback(
+    (row: number, col: number, raw: string) => {
+      collab.setCell(row, col, raw);
+      bump();
+    },
+    [collab, bump],
+  );
 
   const activeRef = useRef(active);
   activeRef.current = active;
@@ -150,6 +163,12 @@ export default function App() {
         group: 'Data',
         run: () => setPanel('validation'),
       }),
+      registerCommand({
+        id: 'sheet.collaborate',
+        title: 'Collaborate',
+        group: 'Collaborate',
+        run: () => setPanel('collab'),
+      }),
       registerCommand({ id: 'sheet.open-xlsx', title: 'Open .xlsx', group: 'File', run: openXlsx }),
       registerCommand({ id: 'sheet.export-xlsx', title: 'Export .xlsx', group: 'File', run: handleExportXlsx }),
       registerCommand({
@@ -190,6 +209,12 @@ export default function App() {
           <Button variant="ghost" onClick={ai.toggle}>
             AI assistant
           </Button>
+          <Button
+            variant="ghost"
+            onClick={() => setPanel((current) => (current === 'collab' ? 'none' : 'collab'))}
+          >
+            Collaborate
+          </Button>
           <Button variant="secondary" onClick={palette.open}>
             Command palette
           </Button>
@@ -200,8 +225,21 @@ export default function App() {
       ) : null}
       <div className={styles.formulaRow}>
         <NameBox engine={engine} active={active} onCommit={bump} />
-        <FormulaBar engine={engine} active={active} onCommit={bump} />
+        <FormulaBar
+          engine={engine}
+          active={active}
+          onCommit={(value) => commitCell(active.row, active.col, value)}
+        />
       </div>
+      {panel === 'collab' ? (
+        <CollabPanel
+          active={collab.active}
+          code={collab.code}
+          onStart={collab.start}
+          onJoin={collab.join}
+          onLeave={collab.leave}
+        />
+      ) : null}
       {panel === 'column' ? (
         <ColumnInspector col={active.col} schema={columnTypes[active.col]} onChange={setColumnType} />
       ) : null}
@@ -253,10 +291,7 @@ export default function App() {
             actions={sheetActions({
               engine,
               active,
-              onInsertFormula: (formula) => {
-                engine.setCell(active.row, active.col, formula);
-                bump();
-              },
+              onInsertFormula: (formula) => commitCell(active.row, active.col, formula),
             })}
             provider={aiProvider}
           />
