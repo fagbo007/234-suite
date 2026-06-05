@@ -1,9 +1,10 @@
-# Real-time collaboration — design sketch
+# Real-time collaboration
 
-> **Status: design sketch (Phase 4 prep).** This records the *intended* design,
-> grounded in the locked decisions in root `CLAUDE.md` (§3.1 Yjs, §9 Phase 4,
-> §17 collaboration entry). The implementation lands in **Phase 4** with the
-> Tauri window and a remote — see "Out of scope". No runtime code ships here.
+> **Status: core implemented (2026-06-05); per-app bindings in progress.** The
+> transport-agnostic Yjs core + relay ship in `/packages/collab` (`@234/collab`);
+> the per-app document bindings + UI (Sheet/Writer/Slides) are the named
+> follow-up slices below. Grounded in root `CLAUDE.md` §3.1 (Yjs), §9 (Phase 4),
+> §17 (collaboration decision).
 
 ## Goal
 
@@ -58,11 +59,35 @@ unchanged with collaboration disabled.
   is a convenience, not a requirement.
 - Consistent with §1: no telemetry without explicit opt-in.
 
-## Out of scope (→ Phase 4 proper)
+## Implemented core (`@234/collab`)
 
-- Implementing `/packages/collab` (Yjs bindings per app, the relay server,
-  session codes) — needs the Tauri window + a remote.
-- Presence/cursors, permissions, and conflict-UX polish.
+`/packages/collab` ships the transport-agnostic machinery:
+
+- **`CollabDoc`** (`src/doc.ts`) — wraps a `Y.Doc` + awareness; exposes
+  `map`/`array`/`text`/`xml` roots for the per-app mappings above.
+- **Session codes** (`src/session.ts`) — `generateSessionCode()` →
+  `234-XXXX-XXXX`; `parseSessionCode()` normalises to a room id.
+- **Transports** (`src/transport.ts`, `src/transports/*`) — a `CollabTransport`
+  interface; `createMemoryNetwork()` (in-process, relays doc + awareness — used
+  for deterministic convergence tests); and lazily-loaded
+  `createWebsocketTransport` (relay) and `createWebrtcTransport` (LAN peer).
+- **Local persistence** (`src/persistence.ts`) — `enableLocalPersistence` via
+  `y-indexeddb`, a no-op without IndexedDB (so a session survives restart in the
+  webview).
+- **Relay** (`relay/server.mjs`) — a minimal `ws` + `y-websocket` relay that
+  ferries updates per room, storing nothing. `pnpm --filter @234/collab relay`.
+
+Correctness is proven by an in-memory-network convergence suite (`Y.Map`/
+`Y.Array`/`Y.Text`, offline-then-reconnect, awareness, room isolation). Real
+cross-peer WebRTC/relay sync is validated manually across instances.
+
+## Follow-up slices (per-app bindings + UI)
+
+- **Sheet** — `Y.Map` cells ↔ `SheetEngine`; "Start/Join session" + code panel.
+- **Writer** — `y-prosemirror` ↔ the editor `Y.XmlFragment`.
+- **Slides** — `Y.Array`/`Y.Map` ↔ the deck model.
+- Presence cursors, permissions, conflict-UX polish; serverless LAN (mDNS)
+  discovery; deploying the relay as a service.
 
 ## References
 

@@ -941,6 +941,25 @@ Format: `YYYY-MM-DD | Decision | Rationale | Alternatives considered`
              keychain failure the command errors rather than writing plaintext).
              Cloud round-trip verified by compile + mocked-invoke unit tests; a
              real-key network call is a manual desktop step.
+
+2026-06-05 | Collaboration (Phase 4, §3.1/§9/§17) core built in /packages/collab
+             (@234/collab): CollabDoc (Y.Doc + awareness), human session codes
+             (generate/parseSessionCode → 234-XXXX-XXXX room id), a CollabTransport
+             abstraction with an in-process createMemoryNetwork (relays doc +
+             awareness, used for deterministic convergence tests) plus lazily-
+             loaded WebSocket (relay) and WebRTC (LAN peer) transports, guarded
+             y-indexeddb local persistence, and a minimal ws + y-websocket relay
+             (relay/server.mjs — ferries updates per room, stores nothing). All
+             deps MIT → suite stays MIT. Apps are untouched (collab stays optional
+             and off by default). |
+             Delivers the §17 collaboration design as a verifiable, transport-
+             agnostic core: 13 tests prove Y.Map/Y.Array/Y.Text convergence,
+             offline-then-reconnect, awareness, and room isolation via the memory
+             network; the relay boots and listens (smoke-verified). |
+             Alternatives: build per-app bindings + UI in this slice (deferred —
+             kept the core a clean, fully-testable unit; Sheet/Writer/Slides
+             bindings are named follow-up slices in collab.md). Real cross-peer
+             WebRTC/relay sync + serverless LAN (mDNS) discovery are manual/future.
 ```
 
 ---

@@ -16,6 +16,8 @@ export default tseslint.config(
       '**/src-tauri/gen/**',
       // Author tooling — plain Node ESM, run manually to generate templates.
       'apps/slides/templates/scaffold.mjs',
+      // Collaboration relay — standalone Node server, run manually.
+      'packages/collab/relay/**',
     ],
   },
   js.configs.recommended,

@@ -14,7 +14,7 @@ expand on individual decisions.
 | [`ai-sidebar.md`](./ai-sidebar.md) | The AI sidebar rule (§6); offline-first scaffold; cloud/key-storage deferral |
 | [`accessibility.md`](./accessibility.md) | The Phase 2 accessibility audit + checklist |
 | [`plugin-api.md`](./plugin-api.md) | Plugin / extension API **sketch** (command + AI-provider seams) |
-| [`collab.md`](./collab.md) | Real-time collaboration (Yjs + optional relay) **sketch** |
+| [`collab.md`](./collab.md) | Real-time collaboration (Yjs + optional relay) — core implemented in `@234/collab`; per-app bindings in progress |
 | [`phase-1-complete.md`](./phase-1-complete.md) | Phase 1 sign-off and verification record |
 
 > Docs marked **sketch** are design-only (Phase 4 prep); the implementation

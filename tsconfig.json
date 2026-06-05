@@ -8,6 +8,7 @@
     { "path": "apps/launcher" },
     { "path": "packages/formula-engine" },
     { "path": "packages/compat" },
-    { "path": "packages/ai-sidebar" }
+    { "path": "packages/ai-sidebar" },
+    { "path": "packages/collab" }
   ]
 }
