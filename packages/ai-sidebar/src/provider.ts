@@ -2,12 +2,14 @@
  * AI provider engine (root CLAUDE.md §6). Providers are interchangeable behind a
  * tiny interface so the sidebar's features never depend on a specific backend.
  *
- * Phase 3 part 1 ships offline-first: `mockProvider` (deterministic, no network,
- * the default) and a **local Ollama** provider (no API key). A Claude/OpenAI
- * provider implements the same interface later; cloud key storage waits for the
- * Tauri window (OS keychain — root §6). 234 never ships a default key, and no key
- * is stored in plaintext (none is stored at all yet).
+ * Phase 3 part 1 shipped offline-first: `mockProvider` (deterministic, no
+ * network, the default) and a **local Ollama** provider (no API key). The cloud
+ * providers (`createCloudProvider`) now run through Rust: the completion happens
+ * in the Tauri backend, which reads the user's key from the OS keychain — the key
+ * never enters JS (root §6). 234 never ships a default key.
  */
+import { invoke } from '@tauri-apps/api/core';
+import { type CloudProviderId, isDesktop } from './keychain';
 
 export interface AiRequest {
   prompt: string;
@@ -69,6 +71,35 @@ export function createOllamaProvider({ baseUrl, model }: OllamaConfig): AiProvid
       }
       const data = (await response.json()) as { response?: string };
       return data.response ?? '';
+    },
+  };
+}
+
+/**
+ * Cloud provider (Claude or OpenAI). The completion runs in the Tauri backend
+ * (`ai_cloud_complete`), which reads the API key from the OS keychain — the key
+ * never enters JS (root §6). Requires the desktop app; in the web build
+ * `complete` throws a friendly error.
+ */
+export function createCloudProvider(
+  id: CloudProviderId,
+  label: string,
+  model: string,
+): AiProvider {
+  return {
+    id,
+    label,
+    offline: false,
+    async complete({ prompt, system }: AiRequest): Promise<string> {
+      if (!isDesktop()) {
+        throw new Error('Cloud AI is available in the desktop app.');
+      }
+      return invoke<string>('ai_cloud_complete', {
+        provider: id,
+        model,
+        system: system ?? null,
+        prompt,
+      });
     },
   };
 }

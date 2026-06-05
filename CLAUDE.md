@@ -917,6 +917,30 @@ Format: `YYYY-MM-DD | Decision | Rationale | Alternatives considered`
              hand-rolled launcher path via registry InstallLocation (unneeded
              given the unified layout). macOS/Linux suite installers follow the
              same pattern (deferred — Windows host).
+
+2026-06-04 | RESOLVES the 2026-06-03 cloud/key-storage deferral: cloud AI
+             (Claude/OpenAI) + §6 OS-keychain key storage are implemented now that
+             the window builds. Design: the API key NEVER enters JS. A shared Rust
+             crate packages/ai-backend (app234_ai, path-dep'd by each app's
+             src-tauri) exposes Tauri commands ai_set_key / ai_delete_key /
+             ai_has_key / ai_cloud_complete; the key is stored in the OS keychain
+             (keyring → Windows Credential Manager / macOS Keychain / Linux Secret
+             Service) and read only inside Rust, which performs the HTTPS call
+             (ureq, native-tls). JS can set/clear/check-presence but cannot read
+             the key back. Frontend: createCloudProvider (invoke wrapper),
+             keychain.ts bridge, AiSettings cloud options + write-only key manager;
+             keys never in localStorage/JS state. Default provider stays offline
+             mock; AI stays docked/user-invoked/optional. |
+             Most faithful reading of §6 ("never plaintext"; "transmitted only to
+             the provider endpoint") and it sidesteps browser CORS — the key lives
+             entirely in Rust/keychain. |
+             Alternatives: fetch the key into JS + fetch from the webview (rejected
+             — weaker, CORS issues); a Tauri secrets plugin (unneeded — keyring is
+             the standard). DEFERRED: the §6 AES-256 encrypted-file fallback for
+             keychain-less systems (keyring covers mainstream platforms; on
+             keychain failure the command errors rather than writing plaintext).
+             Cloud round-trip verified by compile + mocked-invoke unit tests; a
+             real-key network call is a manual desktop step.
 ```
 
 ---

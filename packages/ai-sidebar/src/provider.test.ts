@@ -1,5 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createOllamaProvider, mockProvider } from './provider';
+import { createCloudProvider, createOllamaProvider, mockProvider } from './provider';
+
+const invoke = vi.fn();
+vi.mock('@tauri-apps/api/core', () => ({
+  invoke: (...args: unknown[]) => invoke(...args),
+}));
+
+type Win = Record<string, unknown>;
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -38,5 +45,36 @@ describe('createOllamaProvider', () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('ECONNREFUSED')));
     const provider = createOllamaProvider({ baseUrl: 'http://localhost:11434', model: 'llama3' });
     await expect(provider.complete({ prompt: 'hi' })).rejects.toThrow(/Is it running/);
+  });
+});
+
+describe('createCloudProvider', () => {
+  afterEach(() => {
+    delete (window as unknown as Win).__TAURI_INTERNALS__;
+    invoke.mockReset();
+  });
+
+  it('runs the completion in Rust via ai_cloud_complete (key never enters JS)', async () => {
+    (window as unknown as Win).__TAURI_INTERNALS__ = {};
+    invoke.mockResolvedValueOnce('hello there');
+
+    const provider = createCloudProvider('claude', 'Claude', 'claude-3-5-sonnet-latest');
+    expect(provider.offline).toBe(false);
+
+    await expect(provider.complete({ prompt: 'hi', system: 'be terse' })).resolves.toBe(
+      'hello there',
+    );
+    expect(invoke).toHaveBeenCalledWith('ai_cloud_complete', {
+      provider: 'claude',
+      model: 'claude-3-5-sonnet-latest',
+      system: 'be terse',
+      prompt: 'hi',
+    });
+  });
+
+  it('throws a friendly error (and never invokes) in the web build', async () => {
+    const provider = createCloudProvider('openai', 'OpenAI', 'gpt-4o-mini');
+    await expect(provider.complete({ prompt: 'hi' })).rejects.toThrow(/desktop app/i);
+    expect(invoke).not.toHaveBeenCalled();
   });
 });

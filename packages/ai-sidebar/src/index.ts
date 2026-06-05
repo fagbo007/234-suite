@@ -15,7 +15,15 @@ export {
   type OllamaConfig,
   mockProvider,
   createOllamaProvider,
+  createCloudProvider,
 } from './provider';
+export {
+  type CloudProviderId,
+  isDesktop,
+  hasKey,
+  setKey,
+  deleteKey,
+} from './keychain';
 export {
   useAiSettings,
   DEFAULT_AI_SETTINGS,

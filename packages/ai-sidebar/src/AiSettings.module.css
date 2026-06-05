@@ -32,3 +32,26 @@
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 1px;
 }
+
+.keyRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.keyStatus {
+  font-size: var(--font-size-meta);
+  color: var(--color-fg-secondary);
+}
+
+.note {
+  margin: 0;
+  font-size: var(--font-size-meta);
+  color: var(--color-fg-secondary);
+}
+
+.error {
+  margin: 0;
+  font-size: var(--font-size-meta);
+  color: var(--color-danger);
+}

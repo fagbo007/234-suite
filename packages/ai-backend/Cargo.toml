@@ -1,0 +1,21 @@
+[package]
+name = "app234-ai"
+version = "0.0.0"
+description = "234 suite AI backend — OS-keychain key storage + cloud completions"
+edition = "2021"
+rust-version = "1.77"
+
+[lib]
+name = "app234_ai"
+
+[dependencies]
+serde_json = "1"
+# OS keychain: Windows Credential Manager / macOS Keychain / Linux Secret Service.
+keyring = { version = "3", features = [
+  "windows-native",
+  "apple-native",
+  "sync-secret-service",
+  "crypto-rust",
+] }
+# Blocking HTTPS for the cloud calls. native-tls → SChannel on Windows (no ring/asm).
+ureq = { version = "2", default-features = false, features = ["native-tls"] }
