@@ -11,6 +11,9 @@ build/
 target/
 **/src-tauri/target/
 **/src-tauri/gen/
+# Shared Rust library crate — built as a path-dependency of the apps (their
+# Cargo.lock governs); a standalone Cargo.lock here is regenerated and not canonical.
+packages/ai-backend/Cargo.lock
 
 # Suite installer output (also covered by dist/ above; explicit for clarity)
 installer/dist/

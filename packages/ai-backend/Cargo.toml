@@ -19,3 +19,9 @@ keyring = { version = "3", features = [
 ] }
 # Blocking HTTPS for the cloud calls. native-tls → SChannel on Windows (no ring/asm).
 ureq = { version = "2", default-features = false, features = ["native-tls"] }
+# §6 fallback when no OS keychain is available: an AES-256-GCM encrypted file in
+# the app data dir, keyed by a machine-specific id. Never plaintext.
+aes-gcm = "0.10"
+sha2 = "0.10"
+machine-uid = "0.5"
+dirs = "6"
