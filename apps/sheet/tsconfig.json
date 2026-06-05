@@ -9,6 +9,7 @@
     { "path": "../shared" },
     { "path": "../../packages/formula-engine" },
     { "path": "../../packages/ai-sidebar" },
-    { "path": "../../packages/compat" }
+    { "path": "../../packages/compat" },
+    { "path": "../../packages/collab" }
   ]
 }
