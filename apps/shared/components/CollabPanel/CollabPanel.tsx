@@ -1,5 +1,6 @@
-import { Button, Input } from '@234/shared';
 import { useState } from 'react';
+import { Button } from '../Button';
+import { Input } from '../Input';
 import styles from './CollabPanel.module.css';
 
 export interface CollabPanelProps {
@@ -11,9 +12,9 @@ export interface CollabPanelProps {
 }
 
 /**
- * Docked collaboration panel (root §6-style: user-invoked, optional). Idle: start
- * a session or join one with a code. Active: show the shareable code + leave.
- * Real peer connection is opt-in and only happens on start/join.
+ * Shared docked collaboration panel (root §6-style: user-invoked, optional).
+ * Idle: start a session or join one with a code. Active: show the shareable code
+ * + leave. App-agnostic — used by Sheet, Writer, and Slides.
  */
 export function CollabPanel({ active, code, onStart, onJoin, onLeave }: CollabPanelProps) {
   const [codeInput, setCodeInput] = useState('');

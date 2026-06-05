@@ -3,6 +3,7 @@ import { exportXlsx, importXlsx, type ImportReport } from '@234/compat';
 import { SheetEngine } from '@234/formula-engine';
 import {
   Button,
+  CollabPanel,
   CommandPalette,
   ImportReportPanel,
   registerCommand,
@@ -20,7 +21,6 @@ import { FormulaBar } from './grid/FormulaBar';
 import { Grid, type ColumnTypeMap } from './grid/Grid';
 import { NameBox } from './grid/NameBox';
 import { sheetActions } from './ai/sheetActions';
-import { CollabPanel } from './collab/CollabPanel';
 import { useSheetCollab } from './collab/useSheetCollab';
 import { LinkAuditor } from './inspector/LinkAuditor';
 import { RuleDialog } from './inspector/RuleDialog';

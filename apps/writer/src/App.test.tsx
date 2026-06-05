@@ -15,6 +15,14 @@ describe('234 Writer app', () => {
     expect(screen.getByRole('region', { name: 'Styles' })).toBeTruthy();
   });
 
+  it('opens the collaboration panel with a start-session control', () => {
+    render(<App />);
+    expect(screen.queryByRole('button', { name: 'Start session' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Collaborate' }));
+    expect(screen.getByRole('button', { name: 'Start session' })).toBeTruthy();
+    expect(screen.getByLabelText('Session code')).toBeTruthy();
+  });
+
   it('keeps the AI sidebar closed by default and shows AI actions when opened', () => {
     render(<App />);
     expect(screen.queryByRole('complementary', { name: 'AI assistant' })).toBeNull();

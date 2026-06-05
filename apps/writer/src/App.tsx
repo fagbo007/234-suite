@@ -2,6 +2,7 @@ import { AiActionPanel, AiSettings, AiSidebar, useAiSettings, useAiSidebar } fro
 import { exportDocx, importDocx, type ImportReport } from '@234/compat';
 import {
   Button,
+  CollabPanel,
   CommandPalette,
   ImportReportPanel,
   OFFICE_SHORTCUTS,
@@ -27,6 +28,7 @@ import { ImagePanel } from './editor/ImagePanel';
 import { StyleEditor } from './editor/StyleEditor';
 import { defaultStyleRegistry, setActiveStyleRegistry, type StyleRegistry } from './editor/styles';
 import { writerActions } from './ai/writerActions';
+import { useWriterCollab } from './collab/useWriterCollab';
 
 export default function App() {
   const palette = useCommandPalette();
@@ -38,6 +40,8 @@ export default function App() {
   const [importReport, setImportReport] = useState<ImportReport | null>(null);
   const ai = useAiSidebar('writer');
   const { settings: aiSettings, setSettings: setAiSettings, provider: aiProvider } = useAiSettings();
+  const collab = useWriterCollab();
+  const [collabOpen, setCollabOpen] = useState(false);
 
   const viewRef = useRef<EditorView | null>(null);
   viewRef.current = view;
@@ -124,6 +128,7 @@ export default function App() {
       registerCommand({ id: 'writer.open-docx', title: 'Open .docx', group: 'File', run: openDocx }),
       registerCommand({ id: 'writer.export-docx', title: 'Export .docx', group: 'File', run: handleExportDocx }),
       registerCommand({ id: 'writer.edit-styles', title: 'Edit styles', group: 'Format', run: () => setStylesOpen(true) }),
+      registerCommand({ id: 'writer.collaborate', title: 'Collaborate', group: 'Collaborate', run: () => setCollabOpen(true) }),
       registerCommand({ id: 'writer.ai', title: 'Toggle AI assistant', group: 'AI', run: () => ai.toggle() }),
       registerCommand({ id: 'writer.toggle-theme', title: 'Toggle theme', group: 'View', run: () => toggleTheme() }),
       registerCommand({ id: 'writer.about', title: 'About 234 Writer', group: 'Help', run: () => console.info('234 Writer — Phase 2') }),
@@ -160,6 +165,9 @@ export default function App() {
           <Button variant="ghost" onClick={ai.toggle}>
             AI assistant
           </Button>
+          <Button variant="ghost" onClick={() => setCollabOpen((open) => !open)}>
+            Collaborate
+          </Button>
           <Button variant="secondary" onClick={palette.open}>
             Command palette
           </Button>
@@ -172,9 +180,24 @@ export default function App() {
         <ImportReportPanel report={importReport} onClose={() => setImportReport(null)} />
       ) : null}
 
+      {collabOpen ? (
+        <CollabPanel
+          active={collab.active}
+          code={collab.code}
+          onStart={collab.start}
+          onJoin={collab.join}
+          onLeave={collab.leave}
+        />
+      ) : null}
+
       <div className={styles.workspace}>
         <div className={styles.editorArea}>
-          <Editor onReady={handleReady} onUpdate={handleUpdate} />
+          <Editor
+            onReady={handleReady}
+            onUpdate={handleUpdate}
+            collabDoc={collab.doc}
+            collabRole={collab.role}
+          />
         </div>
         {imageSel && view ? (
           <ImagePanel view={view} image={imageSel} />

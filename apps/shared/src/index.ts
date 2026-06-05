@@ -30,6 +30,7 @@ export {
   type ImportReportPanelProps,
   type ImportReportLike,
 } from '../components/ImportReportPanel';
+export { CollabPanel, type CollabPanelProps } from '../components/CollabPanel';
 export {
   CommandPalette,
   type CommandPaletteProps,

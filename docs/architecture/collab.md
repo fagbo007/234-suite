@@ -91,7 +91,15 @@ cross-peer WebRTC/relay sync is validated manually across instances.
   routes all cell writes through a `commitCell` that uses the binding when a
   session is active. Cells-only for now — **named-range / column-type / chart
   sync still pending**.
-- **Writer** — `y-prosemirror` ↔ the editor `Y.XmlFragment`.
+- **Writer — DONE.** `apps/writer/src/collab/`: `writerCollab.ts`
+  (`collabEditorPlugins` = `ySyncPlugin`/`yCursorPlugin`/`yUndoPlugin` + shared
+  editing keymaps; `seedFragmentFromDoc` for the host) and `useWriterCollab`
+  (session lifecycle, exposes the live `CollabDoc`). `Editor.tsx` reconfigures the
+  view's plugins on enter/leave (solo `prosemirror-history` ⇄ collab y-undo);
+  ySyncPlugin binds the doc to a `Y.XmlFragment`. Writer + Sheet share the
+  promoted **`CollabPanel`** in `@234/shared`. `y-prosemirror` + `yjs` are pinned
+  to match `@234/collab` (single Yjs instance — proven by the fragment-convergence
+  test). Cursor-presence UI styling is deferred.
 - **Slides** — `Y.Array`/`Y.Map` ↔ the deck model.
 - Presence cursors, permissions, conflict-UX polish; serverless LAN (mDNS)
   discovery; deploying the relay as a service.

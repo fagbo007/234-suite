@@ -978,6 +978,24 @@ Format: `YYYY-MM-DD | Decision | Rationale | Alternatives considered`
              Alternatives: route every engine.setCell call site individually
              (rejected — one commitCell seam is cleaner). Real two-peer live edit
              (two windows over WebRTC/relay) is a manual step.
+
+2026-06-05 | Writer collaboration (y-prosemirror): apps/writer/src/collab/ —
+             writerCollab.ts (collabEditorPlugins = ySyncPlugin/yCursorPlugin/
+             yUndoPlugin + shared editing keymaps; seedFragmentFromDoc for the
+             host) + useWriterCollab (session lifecycle, exposes the live
+             CollabDoc). Editor.tsx reconfigures the view's plugins on enter/leave
+             (solo prosemirror-history ⇄ collab y-undo; ySyncPlugin binds the doc
+             to a Y.XmlFragment). CollabPanel was PROMOTED to @234/shared (§4 — no
+             duplication; Sheet now imports it from shared too). y-prosemirror +
+             yjs pinned to match @234/collab so Yjs is a single instance. |
+             Extends collaboration to Writer with the richest model (rich text)
+             while keeping it optional/off; convergence proven at the Y.XmlFragment
+             level via the in-memory network (also the single-yjs dedup canary). |
+             Alternatives: a permanent collab plugin slot reconfigured in place
+             (rejected — recreating the state on enter/leave is simpler and
+             history-correct); keep CollabPanel per-app (rejected — §4 dup). Live
+             in-editor cursor presence is wired (yCursorPlugin) but cursor UI
+             polish + a real two-peer edit are deferred/manual.
 ```
 
 ---
