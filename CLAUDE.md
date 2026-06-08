@@ -1242,6 +1242,30 @@ Format: `YYYY-MM-DD | Decision | Rationale | Alternatives considered`
              suite green; checks 0/0; suite stays MIT (rfd is MIT). The real OS
              dialog + on-disk open/save is a manual desktop step. DEFERRED: recent
              files, auto-save, file-association/"open with", drag-and-drop open.
+
+2026-06-08 | Cross-platform suite installers + CI release pipeline (backlog B —
+             §3.2/§9): the macOS `.dmg` (`installer/build-suite-macos.sh`, via
+             `hdiutil`) and Linux `.deb` (`installer/build-suite-linux.sh`, via
+             `dpkg-deb`) suite installers now mirror the Windows NSIS suite, and
+             the launcher's `launch_app` resolves apps per-OS — Windows/Linux spawn
+             the sibling binary (suite co-locates the four in one dir), macOS opens
+             the sibling `<Product>.app` via `open` (fallback `open -a` by name),
+             keeping "three isolated processes" on every OS. New
+             `.github/workflows/release.yml` builds all per-app bundles across a
+             Win/macOS/Linux matrix — Windows incl. **MSI** (CI checkout has no
+             spaces, so WiX works — the local OneDrive path was the only blocker) —
+             plus the three suite scripts, and attaches everything to a GitHub
+             Release on a `v*` tag. |
+             Completes the §3.2 "single installer per OS + per-app" deliverable and
+             resolves the MSI blocker by building where the path is clean. |
+             Verified here: `cargo check` on the launcher (the non-macOS dispatch +
+             sibling-binary path compile; launcher JS test green). HONEST LIMITATION:
+             the macOS launcher branch is `#[cfg]`-ed out (not compiled on this
+             Windows host), and the `.dmg`/`.deb` scripts + `release.yml` run only on
+             their target OS / in CI — authored to run there (like the dormant
+             `ci.yml`), not artifact-verified locally. DEFERRED: code signing /
+             notarization / Authenticode, auto-update, a suite-level AppImage
+             (per-app AppImages ship via CI), running CI (needs the public remote).
 ```
 
 ---

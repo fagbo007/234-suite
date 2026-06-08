@@ -163,8 +163,17 @@ suite shell is real:
   `tauri build`) remains a separate per-app option, as §3.2 requires.
 
 `tauri-build.md` covers the toolchain; this is the suite assembly on top of it.
-macOS `.dmg` / Linux `.AppImage` suite installers follow the same pattern on
-those OSes (not built on this Windows host).
+
+**Cross-platform suite (built — 2026-06-08).** The macOS `.dmg`
+(`installer/build-suite-macos.sh`, via `hdiutil`) and Linux `.deb`
+(`installer/build-suite-linux.sh`, via `dpkg-deb`) suite installers mirror the
+Windows pattern, and the launcher's `launch_app` resolves apps per-OS
+(Windows/Linux sibling binary; macOS sibling `.app` via `open`). The
+`.github/workflows/release.yml` pipeline builds all per-app bundles (Windows
+NSIS + **MSI**, macOS `.dmg`, Linux `.deb`/`.AppImage`) + the three suite
+installers across an OS matrix on a `v*` tag and attaches them to a GitHub
+Release. The macOS/Linux scripts + the workflow run on their target OS / in CI
+(dormant until a public remote exists), not on this Windows host.
 
 ---
 

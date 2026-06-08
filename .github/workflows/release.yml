@@ -1,0 +1,90 @@
+name: Release
+
+# Builds the per-app installers + the single suite installer for each OS and,
+# on a version tag, attaches them to a GitHub Release (root CLAUDE.md §3.2, §9).
+# Like ci.yml, this is dormant until a public remote + a `v*` tag exist.
+#
+# Per OS: Windows → NSIS + MSI (MSI builds here — the CI checkout path has no
+# spaces, unlike a local OneDrive checkout); macOS → .app + .dmg; Linux → .deb +
+# .AppImage. Then the matching suite-assembly script bundles all four apps.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  bundle:
+    name: bundle (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            bundles: nsis,msi
+            suite: pwsh installer/build-suite.ps1
+          - os: macos-latest
+            bundles: app,dmg
+            suite: bash installer/build-suite-macos.sh
+          - os: ubuntu-latest
+            bundles: deb,appimage
+            suite: bash installer/build-suite-linux.sh
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Enable corepack (pnpm)
+        run: corepack enable
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Linux Tauri dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build app bundles
+        shell: bash
+        run: |
+          for app in writer sheet slides launcher; do
+            pnpm --filter "@234/$app" tauri build --bundles ${{ matrix.bundles }}
+          done
+
+      - name: Resolve version
+        shell: bash
+        run: |
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then v="${GITHUB_REF_NAME#v}"; else v="0.0.0"; fi
+          echo "VERSION=$v" >> "$GITHUB_ENV"
+
+      - name: Build suite installer
+        shell: bash
+        run: ${{ matrix.suite }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: 234-suite-${{ matrix.os }}
+          path: |
+            installer/dist/*
+            apps/*/src-tauri/target/release/bundle/**/*
+          if-no-files-found: error
+
+      - name: Attach to release (on tag)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            installer/dist/*
+            apps/*/src-tauri/target/release/bundle/nsis/*
+            apps/*/src-tauri/target/release/bundle/msi/*
+            apps/*/src-tauri/target/release/bundle/dmg/*
+            apps/*/src-tauri/target/release/bundle/deb/*
+            apps/*/src-tauri/target/release/bundle/appimage/*
