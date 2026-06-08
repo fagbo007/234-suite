@@ -1,6 +1,7 @@
 import { Button, Input } from '@234/shared';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { type CloudProviderId, deleteKey, hasKey, isDesktop, setKey } from './keychain';
+import { getProviders, subscribeProviders } from './providerRegistry';
 import { type AiSettings as AiSettingsValue, type ProviderId } from './useAiSettings';
 import styles from './AiSettings.module.css';
 
@@ -97,6 +98,8 @@ function KeyField({ provider }: { provider: CloudProviderId }) {
  * Rust — the key never enters JS or localStorage (root §6).
  */
 export function AiSettings({ settings, onChange }: AiSettingsProps) {
+  // Plugin-registered providers appear after the built-ins (root §6 Phase-4 hook).
+  const registered = useSyncExternalStore(subscribeProviders, getProviders, getProviders);
   return (
     <div className={styles.settings}>
       <label className={styles.field}>
@@ -111,6 +114,11 @@ export function AiSettings({ settings, onChange }: AiSettingsProps) {
           <option value="ollama">Local Ollama</option>
           <option value="claude">Claude</option>
           <option value="openai">OpenAI</option>
+          {registered.map((provider) => (
+            <option key={provider.id} value={provider.id}>
+              {provider.label}
+            </option>
+          ))}
         </select>
       </label>
 

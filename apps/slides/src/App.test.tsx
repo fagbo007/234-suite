@@ -68,5 +68,7 @@ describe('234 Slides app', () => {
     expect(screen.getByLabelText('AI provider')).toBeTruthy();
     expect(screen.getByLabelText('Generate outline input')).toBeTruthy();
     expect(screen.getByRole('button', { name: /draft speaker notes/i })).toBeTruthy();
+    // The in-tree sample plugin registered an extra provider, selectable here.
+    expect(screen.getByRole('option', { name: 'Sample echo (plugin)' })).toBeTruthy();
   });
 });

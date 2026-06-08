@@ -1,5 +1,13 @@
-import { AiActionPanel, AiSettings, AiSidebar, useAiSettings, useAiSidebar } from '@234/ai-sidebar';
+import {
+  AiActionPanel,
+  AiSettings,
+  AiSidebar,
+  registerProvider,
+  useAiSettings,
+  useAiSidebar,
+} from '@234/ai-sidebar';
 import { exportDocx, importDocx, type ImportReport } from '@234/compat';
+import { loadPlugins, sampleProviderPlugin, type Plugin } from '@234/plugin-host';
 import {
   Button,
   CollabPanel,
@@ -30,6 +38,10 @@ import { defaultStyleRegistry, setActiveStyleRegistry, type StyleRegistry } from
 import { writerActions } from './ai/writerActions';
 import { useCollabSession, usePresence } from '@234/collab';
 import { bindStyles, type StylesBinding } from './collab/bindStyles';
+
+// In-tree, opt-in plugins loaded through the plugin host (root §9; plugin-api.md).
+// Append further in-tree plugins here; dynamic/remote loading is Phase-4-proper.
+const BUILTIN_PLUGINS: Plugin[] = [sampleProviderPlugin];
 
 export default function App() {
   const palette = useCommandPalette();
@@ -122,6 +134,14 @@ export default function App() {
     setActiveStyleRegistry(registry);
     if (view) refreshStyledBlocks(view);
   }, [registry, view]);
+
+  // Load in-tree plugins through the host (commands + AI providers). Teardown on
+  // unmount fully removes their contributions.
+  useEffect(
+    () =>
+      loadPlugins(BUILTIN_PLUGINS, { app: 'writer', registerCommand, registerAiProvider: registerProvider }),
+    [],
+  );
 
   // Collaboration: sync the style registry (definitions) over the shared doc.
   // Block styleId attrs + images already sync as ProseMirror nodes; this carries

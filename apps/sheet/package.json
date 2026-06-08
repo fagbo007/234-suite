@@ -16,6 +16,7 @@
     "@234/collab": "workspace:*",
     "@234/compat": "workspace:*",
     "@234/formula-engine": "workspace:*",
+    "@234/plugin-host": "workspace:*",
     "@234/shared": "workspace:*",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"

@@ -1154,6 +1154,38 @@ Format: `YYYY-MM-DD | Decision | Rationale | Alternatives considered`
              SlidePanel +1 tests; 60fps + 100-slide gates held; all three apps build.
              The live two-peer visual is a manual step. Remaining collab follow-up:
              registry `styleOrder`; follow-a-peer; field-level merge.
+
+2026-06-08 | Plugin loader (backlog A8 — makes docs/architecture/plugin-api.md
+             real): new `@234/plugin-host` (`packages/plugin-host`) ships
+             `definePlugin` + a narrow `PluginHost` ({ app, registerCommand,
+             registerAiProvider }) + `loadPlugins(plugins, opts)` with id-dedup,
+             error isolation (a throwing `setup` is logged + rolled back; others
+             load), and full teardown (returned disposer removes the plugin's own
+             teardown + all auto-tracked unregisters). The host is
+             dependency-inverted — the app injects `registerCommand` (@234/shared)
+             + `registerAiProvider` (@234/ai-sidebar), so the package is pure logic
+             with type-only `Command`/`AiProvider` imports (node-testable like
+             formula-engine). New AI-provider registry in @234/ai-sidebar
+             (`providerRegistry.ts`, useSyncExternalStore-friendly) so a
+             plugin-registered provider is resolved by `useAiSettings` and listed
+             in `AiSettings`' selector. All three apps load a `BUILTIN_PLUGINS`
+             list on mount (cleanup = teardown); a shipped `sampleProviderPlugin`
+             (offline echo) proves it end-to-end (selectable in each app's sidebar,
+             asserted in the App tests). |
+             Delivers the §9 Phase-4 plugin API as a real, in-tree loader over the
+             two existing seams while honouring §6 (a provider plugin only feeds
+             the docked, user-invoked sidebar — no surface of its own) and §16
+             (no plaintext secrets; the host stays a narrow capability surface). |
+             Alternatives: have plugin-host import the two packages' runtime
+             (rejected — pulls React into a node-test pkg; dependency-inversion via
+             injected register fns is cleaner); ship an empty BUILTIN list
+             (rejected by owner — a shipped sample proves the loader in-app);
+             per-app capability injection beyond the two seams (deferred). suite
+             stays MIT (no new dep — plugin-host is in-tree). plugin-host 6 /
+             ai-sidebar 29 (+3) tests; full suite green; gates held; all apps
+             build; `pnpm checks` 0/0. DEFERRED (Phase-4-proper): dynamic/remote
+             discovery + sandbox (needs the Tauri backend), an enable/disable
+             settings UI, a host key-storage capability for cloud-provider plugins.
 ```
 
 ---

@@ -1,5 +1,13 @@
-import { AiActionPanel, AiSettings, AiSidebar, useAiSettings, useAiSidebar } from '@234/ai-sidebar';
+import {
+  AiActionPanel,
+  AiSettings,
+  AiSidebar,
+  registerProvider,
+  useAiSettings,
+  useAiSidebar,
+} from '@234/ai-sidebar';
 import { exportXlsx, importXlsx, type ImportReport } from '@234/compat';
+import { loadPlugins, sampleProviderPlugin, type Plugin } from '@234/plugin-host';
 import { SheetEngine } from '@234/formula-engine';
 import {
   Button,
@@ -27,6 +35,9 @@ import { LinkAuditor } from './inspector/LinkAuditor';
 import { RuleDialog } from './inspector/RuleDialog';
 
 type Panel = 'none' | 'column' | 'links' | 'chart' | 'conditional' | 'validation' | 'collab';
+
+// In-tree, opt-in plugins loaded through the plugin host (root §9; plugin-api.md).
+const BUILTIN_PLUGINS: Plugin[] = [sampleProviderPlugin];
 
 export default function App() {
   const palette = useCommandPalette();
@@ -84,6 +95,13 @@ export default function App() {
 
   const activeRef = useRef(active);
   activeRef.current = active;
+
+  // Load in-tree plugins through the host (commands + AI providers).
+  useEffect(
+    () =>
+      loadPlugins(BUILTIN_PLUGINS, { app: 'sheet', registerCommand, registerAiProvider: registerProvider }),
+    [],
+  );
 
   // Open an .xlsx → replace the sheet's cells (via @234/compat) + show the report.
   const openXlsx = useCallback(() => {

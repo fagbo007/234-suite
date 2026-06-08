@@ -130,6 +130,9 @@ importers:
       '@234/formula-engine':
         specifier: workspace:*
         version: link:../../packages/formula-engine
+      '@234/plugin-host':
+        specifier: workspace:*
+        version: link:../../packages/plugin-host
       '@234/shared':
         specifier: workspace:*
         version: link:../shared
@@ -179,6 +182,9 @@ importers:
       '@234/compat':
         specifier: workspace:*
         version: link:../../packages/compat
+      '@234/plugin-host':
+        specifier: workspace:*
+        version: link:../../packages/plugin-host
       '@234/shared':
         specifier: workspace:*
         version: link:../shared
@@ -237,6 +243,9 @@ importers:
       '@234/compat':
         specifier: workspace:*
         version: link:../../packages/compat
+      '@234/plugin-host':
+        specifier: workspace:*
+        version: link:../../packages/plugin-host
       '@234/shared':
         specifier: workspace:*
         version: link:../shared
@@ -417,6 +426,22 @@ importers:
         version: 2.1.9(@types/node@22.19.19)(jsdom@25.0.1(canvas@2.11.2))
 
   packages/formula-engine:
+    devDependencies:
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.19.19)(jsdom@25.0.1(canvas@2.11.2))
+
+  packages/plugin-host:
+    dependencies:
+      '@234/ai-sidebar':
+        specifier: workspace:*
+        version: link:../ai-sidebar
+      '@234/shared':
+        specifier: workspace:*
+        version: link:../../apps/shared
     devDependencies:
       typescript:
         specifier: ^5.7.2

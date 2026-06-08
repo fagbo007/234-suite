@@ -1,5 +1,13 @@
-import { AiActionPanel, AiSettings, AiSidebar, useAiSettings, useAiSidebar } from '@234/ai-sidebar';
+import {
+  AiActionPanel,
+  AiSettings,
+  AiSidebar,
+  registerProvider,
+  useAiSettings,
+  useAiSidebar,
+} from '@234/ai-sidebar';
 import { exportPptx, importPptx, type ImportReport } from '@234/compat';
+import { loadPlugins, sampleProviderPlugin, type Plugin } from '@234/plugin-host';
 import {
   Button,
   CollabPanel,
@@ -46,6 +54,9 @@ function makeImage(src: string): SlideObject {
 function makeAiText(text: string): SlideObject {
   return { id: crypto.randomUUID(), kind: 'text', x: 80, y: 80, width: 640, height: 360, text, fontSize: 20 };
 }
+
+// In-tree, opt-in plugins loaded through the plugin host (root §9; plugin-api.md).
+const BUILTIN_PLUGINS: Plugin[] = [sampleProviderPlugin];
 
 export default function App() {
   const palette = useCommandPalette();
@@ -95,6 +106,13 @@ export default function App() {
     }
     bindingRef.current.pushDeck(deck);
   }, [deck]);
+
+  // Load in-tree plugins through the host (commands + AI providers).
+  useEffect(
+    () =>
+      loadPlugins(BUILTIN_PLUGINS, { app: 'slides', registerCommand, registerAiProvider: registerProvider }),
+    [],
+  );
 
   const insert = useCallback((factory: () => SlideObject) => {
     setDeck((current) => {

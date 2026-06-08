@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AiSettings } from './AiSettings';
+import { registerProvider } from './providerRegistry';
 import { DEFAULT_AI_SETTINGS } from './useAiSettings';
 
 const invoke = vi.fn();
@@ -54,5 +55,21 @@ describe('AiSettings', () => {
     render(<AiSettings settings={{ ...DEFAULT_AI_SETTINGS, provider: 'openai' }} onChange={onChange} />);
     expect(screen.queryByLabelText('API key')).toBeNull();
     expect(screen.getByText(/desktop app/i)).toBeTruthy();
+  });
+
+  it('lists a plugin-registered provider as a selectable option', () => {
+    const off = registerProvider({
+      id: 'sample-echo',
+      label: 'Sample echo (plugin)',
+      offline: true,
+      complete: ({ prompt }) => Promise.resolve(prompt),
+    });
+    try {
+      render(<AiSettings settings={DEFAULT_AI_SETTINGS} onChange={vi.fn()} />);
+      const option = screen.getByRole('option', { name: 'Sample echo (plugin)' }) as HTMLOptionElement;
+      expect(option.value).toBe('sample-echo');
+    } finally {
+      off();
+    }
   });
 });

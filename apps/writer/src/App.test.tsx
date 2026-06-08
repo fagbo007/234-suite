@@ -32,5 +32,7 @@ describe('234 Writer app', () => {
     expect(screen.getByLabelText('AI provider')).toBeTruthy();
     expect(screen.getByRole('button', { name: /rephrase/i })).toBeTruthy();
     expect(screen.getByRole('button', { name: /continue writing/i })).toBeTruthy();
+    // The in-tree sample plugin registered an extra provider, selectable here.
+    expect(screen.getByRole('option', { name: 'Sample echo (plugin)' })).toBeTruthy();
   });
 });

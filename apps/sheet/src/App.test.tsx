@@ -32,5 +32,7 @@ describe('234 Sheet app', () => {
     expect(screen.getByLabelText('AI provider')).toBeTruthy();
     expect(screen.getByLabelText('Natural language to formula input')).toBeTruthy();
     expect(screen.getByRole('button', { name: /explain this formula/i })).toBeTruthy();
+    // The in-tree sample plugin registered an extra provider, selectable here.
+    expect(screen.getByRole('option', { name: 'Sample echo (plugin)' })).toBeTruthy();
   });
 });

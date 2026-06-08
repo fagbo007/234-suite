@@ -33,3 +33,4 @@ export {
 } from './useAiSettings';
 export { AiActionPanel, type AiAction, type AiActionPanelProps } from './AiActionPanel';
 export { AiSettings, type AiSettingsProps } from './AiSettings';
+export { registerProvider, getProviders, subscribeProviders } from './providerRegistry';

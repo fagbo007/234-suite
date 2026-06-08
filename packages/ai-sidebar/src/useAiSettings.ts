@@ -1,12 +1,14 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useSyncExternalStore } from 'react';
 import {
   type AiProvider,
   createCloudProvider,
   createOllamaProvider,
   mockProvider,
 } from './provider';
+import { getProviders, subscribeProviders } from './providerRegistry';
 
-export type ProviderId = 'mock' | 'ollama' | 'claude' | 'openai';
+// The built-in ids plus any plugin-registered provider id (`string`).
+export type ProviderId = 'mock' | 'ollama' | 'claude' | 'openai' | (string & {});
 
 export interface AiSettings {
   provider: ProviderId;
@@ -52,6 +54,8 @@ export interface UseAiSettings {
  */
 export function useAiSettings(): UseAiSettings {
   const [settings, setSettingsState] = useState<AiSettings>(() => readSettings());
+  // Plugin-registered providers (live snapshot).
+  const registered = useSyncExternalStore(subscribeProviders, getProviders, getProviders);
 
   const setSettings = (next: AiSettings) => {
     setSettingsState(next);
@@ -73,8 +77,11 @@ export function useAiSettings(): UseAiSettings {
         return createCloudProvider('claude', 'Claude', settings.claudeModel);
       case 'openai':
         return createCloudProvider('openai', 'OpenAI', settings.openaiModel);
-      default:
+      case 'mock':
         return mockProvider;
+      default:
+        // A plugin-registered provider, else fall back to the offline mock.
+        return registered.find((p) => p.id === settings.provider) ?? mockProvider;
     }
   }, [
     settings.provider,
@@ -82,6 +89,7 @@ export function useAiSettings(): UseAiSettings {
     settings.ollamaModel,
     settings.claudeModel,
     settings.openaiModel,
+    registered,
   ]);
 
   return { settings, setSettings, provider };
