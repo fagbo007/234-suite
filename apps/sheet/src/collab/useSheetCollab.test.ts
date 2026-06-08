@@ -16,7 +16,11 @@ describe('useSheetCollab', () => {
     engine = new SheetEngine();
     const net = createMemoryNetwork();
     const { result } = renderHook(() =>
-      useSheetCollab(engine as SheetEngine, () => {}, { transportFactory: () => net.transport() }),
+      useSheetCollab(engine as SheetEngine, () => {}, {
+        columnTypes: {},
+        onRemoteColumnType: () => {},
+        transportFactory: () => net.transport(),
+      }),
     );
 
     expect(result.current.active).toBe(false);
@@ -34,7 +38,11 @@ describe('useSheetCollab', () => {
     engine = new SheetEngine();
     const net = createMemoryNetwork();
     const { result } = renderHook(() =>
-      useSheetCollab(engine as SheetEngine, () => {}, { transportFactory: () => net.transport() }),
+      useSheetCollab(engine as SheetEngine, () => {}, {
+        columnTypes: {},
+        onRemoteColumnType: () => {},
+        transportFactory: () => net.transport(),
+      }),
     );
     act(() => {
       result.current.start();
@@ -49,7 +57,11 @@ describe('useSheetCollab', () => {
     engine = new SheetEngine();
     const net = createMemoryNetwork();
     const { result } = renderHook(() =>
-      useSheetCollab(engine as SheetEngine, () => {}, { transportFactory: () => net.transport() }),
+      useSheetCollab(engine as SheetEngine, () => {}, {
+        columnTypes: {},
+        onRemoteColumnType: () => {},
+        transportFactory: () => net.transport(),
+      }),
     );
     let error: string | null = null;
     act(() => {
@@ -63,7 +75,11 @@ describe('useSheetCollab', () => {
     engine = new SheetEngine();
     const net = createMemoryNetwork();
     const { result } = renderHook(() =>
-      useSheetCollab(engine as SheetEngine, () => {}, { transportFactory: () => net.transport() }),
+      useSheetCollab(engine as SheetEngine, () => {}, {
+        columnTypes: {},
+        onRemoteColumnType: () => {},
+        transportFactory: () => net.transport(),
+      }),
     );
     act(() => {
       result.current.start();

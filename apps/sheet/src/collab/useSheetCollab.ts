@@ -1,13 +1,12 @@
 /**
  * Session lifecycle for Sheet collaboration. Owns a `CollabDoc` + `bindSheet`
- * binding + a transport, exposing start / join / leave and a `setCell` that
- * routes through the binding when a session is active (else straight to the
- * engine). Collaboration is opt-in; nothing connects until the user starts or
- * joins (root §17 / §6 "always optional").
+ * binding + a transport, exposing start / join / leave plus the local-edit entry
+ * points that mirror to the shared doc when a session is active: `setCell`,
+ * `defineName`, `setColumnType`. Collaboration is opt-in; nothing connects until
+ * the user starts or joins (root §17 / §6 "always optional").
  *
  * Transport defaults: WebRTC (zero-setup peer); a relay URL switches to the
- * WebSocket transport. `transportFactory` is injectable so tests drive it with
- * an in-memory network (no real network).
+ * WebSocket transport. `transportFactory` is injectable for tests.
  */
 import {
   CollabDoc,
@@ -19,22 +18,33 @@ import {
 } from '@234/collab';
 import { type SheetEngine } from '@234/formula-engine';
 import { useCallback, useRef, useState } from 'react';
+import { type ColumnSchemaValue } from '../grid/ColumnInspector';
 import { bindSheet, type SheetBinding } from './bindSheet';
 
 export type CollabRole = 'idle' | 'host' | 'guest';
 export type TransportFactory = (relayUrl?: string) => CollabTransport;
 
+export interface UseSheetCollabOptions {
+  /** Current column types (read on host start to seed the shared doc). */
+  columnTypes: Record<number, ColumnSchemaValue>;
+  /** Apply a remote column-type change to App state. `null` ⇒ cleared. */
+  onRemoteColumnType: (col: number, schema: ColumnSchemaValue | null) => void;
+  transportFactory?: TransportFactory;
+}
+
 export interface SheetCollab {
   active: boolean;
   role: CollabRole;
   code: string | null;
-  /** Start hosting a new session; returns the shareable code. */
   start: () => string;
-  /** Join an existing session by code; returns an error message or `null`. */
   join: (code: string, relayUrl?: string) => string | null;
   leave: () => void;
   /** Set a cell — via the shared doc when in a session, else the engine alone. */
   setCell: (row: number, col: number, raw: string) => void;
+  /** Define a named reference — mirrored to the shared doc when in a session. */
+  defineName: (name: string, row: number, col: number) => void;
+  /** Mirror a column-type change to the shared doc (no-op when not in a session). */
+  setColumnType: (col: number, schema: ColumnSchemaValue | null) => void;
 }
 
 interface Session {
@@ -49,7 +59,7 @@ const defaultFactory: TransportFactory = (relayUrl) =>
 export function useSheetCollab(
   engine: SheetEngine,
   onRemoteChange: () => void,
-  opts: { transportFactory?: TransportFactory } = {},
+  opts: UseSheetCollabOptions,
 ): SheetCollab {
   const [role, setRole] = useState<CollabRole>('idle');
   const [code, setCode] = useState<string | null>(null);
@@ -60,13 +70,20 @@ export function useSheetCollab(
   engineRef.current = engine;
   const onRemoteRef = useRef(onRemoteChange);
   onRemoteRef.current = onRemoteChange;
+  const columnTypesRef = useRef(opts.columnTypes);
+  columnTypesRef.current = opts.columnTypes;
+  const onColumnTypeRef = useRef(opts.onRemoteColumnType);
+  onColumnTypeRef.current = opts.onRemoteColumnType;
   const factoryRef = useRef<TransportFactory>(opts.transportFactory ?? defaultFactory);
 
   const begin = useCallback(
     (room: string, sessionCode: string, asRole: 'host' | 'guest', relayUrl?: string) => {
       const doc = new CollabDoc();
-      const binding = bindSheet(engineRef.current, doc, () => onRemoteRef.current());
-      if (asRole === 'host') binding.seedFromEngine();
+      const binding = bindSheet(engineRef.current, doc, {
+        onRemoteChange: () => onRemoteRef.current(),
+        onColumnType: (col, schema) => onColumnTypeRef.current(col, schema),
+      });
+      if (asRole === 'host') binding.seed(columnTypesRef.current);
       const transport = factoryRef.current(relayUrl);
       transport.connect(doc, room);
       sessionRef.current = { doc, binding, transport };
@@ -112,5 +129,15 @@ export function useSheetCollab(
     else engineRef.current.setCell(row, col, raw);
   }, []);
 
-  return { active: role !== 'idle', role, code, start, join, leave, setCell };
+  const defineName = useCallback((name: string, row: number, col: number) => {
+    const session = sessionRef.current;
+    if (session) session.binding.defineName(name, row, col);
+    else engineRef.current.defineName(name, row, col);
+  }, []);
+
+  const setColumnType = useCallback((col: number, schema: ColumnSchemaValue | null) => {
+    sessionRef.current?.binding.setColumnType(col, schema);
+  }, []);
+
+  return { active: role !== 'idle', role, code, start, join, leave, setCell, defineName, setColumnType };
 }

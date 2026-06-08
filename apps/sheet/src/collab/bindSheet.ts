@@ -1,27 +1,40 @@
 /**
- * Binds a `SheetEngine` to a Yjs `Y.Map` of cell raw-content (root §3.1; the
- * Sheet mapping in docs/architecture/collab.md). Cells are keyed `"row,col"` →
- * raw string (formulas sync as their raw text; resolution stays local). Local
- * edits are tagged with a `LOCAL` transaction origin so the observer applies
- * only *remote* changes back to the engine — no echo loop.
+ * Binds a `SheetEngine` + the App's column-type metadata to a Yjs document (the
+ * Sheet mapping in docs/architecture/collab.md). Three shared maps, all guarded
+ * by a `LOCAL` transaction origin so observers apply only *remote* changes:
  *
- * Named-range / column-type sync is a follow-up; this binds cell content only.
+ *   cells       : Y.Map<"row,col" → raw string>   — cell content (formulas as raw text)
+ *   names       : Y.Map<name → "row,col">         — named references (coords, never A1; §3.4/§16)
+ *   columnTypes : Y.Map<colIndex → JSON(schema)>  — explicit column types (date format, etc.)
+ *
+ * Cells + named refs live in the engine; column types live in App React state, so
+ * remote column-type changes are delivered via the `onColumnType` callback.
+ * Charts and conditional/validation rules are a follow-up.
  */
 import { type CollabDoc, Y } from '@234/collab';
 import { type SheetEngine } from '@234/formula-engine';
+import { type ColumnSchemaValue } from '../grid/ColumnInspector';
+
+export interface SheetBindingCallbacks {
+  /** Remote cell or named-ref change applied to the engine — re-render/recalc. */
+  onRemoteChange?: () => void;
+  /** Remote column-type change (App owns the state). `null` ⇒ cleared. */
+  onColumnType?: (col: number, schema: ColumnSchemaValue | null) => void;
+}
 
 export interface SheetBinding {
-  /** Set a cell locally and mirror it to the shared doc. */
   setCell(row: number, col: number, raw: string): void;
-  /** Host: copy the engine's current cells into the shared doc. */
-  seedFromEngine(): void;
+  defineName(name: string, row: number, col: number): void;
+  setColumnType(col: number, schema: ColumnSchemaValue | null): void;
+  /** Host: copy the engine's cells + names and the given column types into the doc. */
+  seed(columnTypes: Record<number, ColumnSchemaValue>): void;
   destroy(): void;
 }
 
 const cellKey = (row: number, col: number) => `${row},${col}`;
 
-function parseCellKey(key: string): [number, number] | null {
-  const parts = key.split(',');
+function parseCoord(value: string): [number, number] | null {
+  const parts = value.split(',');
   if (parts.length !== 2) return null;
   const row = Number(parts[0]);
   const col = Number(parts[1]);
@@ -32,24 +45,61 @@ function parseCellKey(key: string): [number, number] | null {
 export function bindSheet(
   engine: SheetEngine,
   doc: CollabDoc,
-  onRemoteChange: () => void = () => {},
+  callbacks: SheetBindingCallbacks = {},
 ): SheetBinding {
+  const { onRemoteChange = () => {}, onColumnType = () => {} } = callbacks;
   const cells = doc.map<string>('cells');
+  const names = doc.map<string>('names');
+  const columnTypes = doc.map<string>('columnTypes');
   const LOCAL = Symbol('sheet-binding-local');
 
-  const observer = (event: Y.YMapEvent<string>, transaction: Y.Transaction) => {
-    if (transaction.origin === LOCAL) return; // ignore our own edits
+  const onCells = (event: Y.YMapEvent<string>, txn: Y.Transaction) => {
+    if (txn.origin === LOCAL) return;
     let changed = false;
     event.keys.forEach((change, key) => {
-      const coord = parseCellKey(key);
+      const coord = parseCoord(key);
       if (!coord) return;
-      const [row, col] = coord;
-      engine.setCell(row, col, change.action === 'delete' ? '' : (cells.get(key) ?? ''));
+      engine.setCell(coord[0], coord[1], change.action === 'delete' ? '' : (cells.get(key) ?? ''));
       changed = true;
     });
     if (changed) onRemoteChange();
   };
-  cells.observe(observer);
+
+  const onNames = (event: Y.YMapEvent<string>, txn: Y.Transaction) => {
+    if (txn.origin === LOCAL) return;
+    let changed = false;
+    event.keys.forEach((change, name) => {
+      if (change.action === 'delete') {
+        engine.removeName(name);
+        changed = true;
+        return;
+      }
+      const coord = parseCoord(names.get(name) ?? '');
+      if (coord) {
+        engine.defineName(name, coord[0], coord[1]);
+        changed = true;
+      }
+    });
+    if (changed) onRemoteChange();
+  };
+
+  const onColumns = (event: Y.YMapEvent<string>, txn: Y.Transaction) => {
+    if (txn.origin === LOCAL) return;
+    event.keys.forEach((change, key) => {
+      const col = Number(key);
+      if (!Number.isInteger(col)) return;
+      if (change.action === 'delete') {
+        onColumnType(col, null);
+      } else {
+        const raw = columnTypes.get(key);
+        if (raw) onColumnType(col, JSON.parse(raw) as ColumnSchemaValue);
+      }
+    });
+  };
+
+  cells.observe(onCells);
+  names.observe(onNames);
+  columnTypes.observe(onColumns);
 
   return {
     setCell(row, col, raw) {
@@ -60,7 +110,19 @@ export function bindSheet(
       }, LOCAL);
     },
 
-    seedFromEngine() {
+    defineName(name, row, col) {
+      engine.defineName(name, row, col);
+      doc.doc.transact(() => names.set(name, `${row},${col}`), LOCAL);
+    },
+
+    setColumnType(col, schema) {
+      doc.doc.transact(() => {
+        if (schema === null) columnTypes.delete(String(col));
+        else columnTypes.set(String(col), JSON.stringify(schema));
+      }, LOCAL);
+    },
+
+    seed(columnTypesSnapshot) {
       const { rows, cols } = engine.usedRange();
       doc.doc.transact(() => {
         for (let row = 0; row < rows; row += 1) {
@@ -69,11 +131,20 @@ export function bindSheet(
             if (raw !== '') cells.set(cellKey(row, col), raw);
           }
         }
+        const exported = engine.exportNames();
+        for (const [name, coord] of Object.entries(exported)) {
+          names.set(name, `${coord.row},${coord.col}`);
+        }
+        for (const [col, schema] of Object.entries(columnTypesSnapshot)) {
+          columnTypes.set(String(col), JSON.stringify(schema));
+        }
       }, LOCAL);
     },
 
     destroy() {
-      cells.unobserve(observer);
+      cells.unobserve(onCells);
+      names.unobserve(onNames);
+      columnTypes.unobserve(onColumns);
     },
   };
 }

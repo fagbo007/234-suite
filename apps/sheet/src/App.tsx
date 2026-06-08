@@ -50,9 +50,23 @@ export default function App() {
   const [importReport, setImportReport] = useState<ImportReport | null>(null);
   const bump = useCallback(() => setRevision((value) => value + 1), []);
 
-  // Optional collaboration: when a session is active, cell edits flow through the
-  // shared Yjs doc; otherwise straight to the engine. Off by default (root §17).
-  const collab = useSheetCollab(engine, bump);
+  // Optional collaboration: when a session is active, cell edits + named refs +
+  // column types flow through the shared Yjs doc; otherwise straight to the
+  // engine / local state. Off by default (root §17).
+  const collab = useSheetCollab(engine, bump, {
+    columnTypes,
+    onRemoteColumnType: (col, schema) => {
+      setColumnTypes((prev) => {
+        if (schema === null) {
+          const next = { ...prev };
+          delete next[col];
+          return next;
+        }
+        return { ...prev, [col]: schema };
+      });
+      bump();
+    },
+  });
   const commitCell = useCallback(
     (row: number, col: number, raw: string) => {
       collab.setCell(row, col, raw);
@@ -103,6 +117,7 @@ export default function App() {
   }, [engine]);
 
   const setColumnType = (col: number, schema: ColumnSchemaValue) => {
+    collab.setColumnType(col, schema); // mirror to the shared doc when collaborating
     setColumnTypes((prev) => ({ ...prev, [col]: schema }));
   };
 
@@ -224,7 +239,14 @@ export default function App() {
         <ImportReportPanel report={importReport} onClose={() => setImportReport(null)} />
       ) : null}
       <div className={styles.formulaRow}>
-        <NameBox engine={engine} active={active} onCommit={bump} />
+        <NameBox
+          engine={engine}
+          active={active}
+          onDefineName={(name, row, col) => {
+            collab.defineName(name, row, col);
+            bump();
+          }}
+        />
         <FormulaBar
           engine={engine}
           active={active}

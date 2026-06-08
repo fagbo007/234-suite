@@ -89,8 +89,10 @@ cross-peer WebRTC/relay sync is validated manually across instances.
   `useSheetCollab` owns the session (start/join/leave, WebRTC by default or a
   relay URL → WebSocket); `CollabPanel` is the docked Start/Join UI. The App
   routes all cell writes through a `commitCell` that uses the binding when a
-  session is active. Cells-only for now — **named-range / column-type / chart
-  sync still pending**.
+  session is active. `bindSheet` syncs three maps — `cells`, `names` (named refs,
+  coords never A1), and `columnTypes` — so a peer resolves named-ref formulas and
+  sees the same date/column formatting. **Chart sync still pending** (and Writer's
+  style-registry — see below).
 - **Writer — DONE.** `apps/writer/src/collab/`: `writerCollab.ts`
   (`collabEditorPlugins` = `ySyncPlugin`/`yCursorPlugin`/`yUndoPlugin` + shared
   editing keymaps; `seedFragmentFromDoc` for the host) and the shared

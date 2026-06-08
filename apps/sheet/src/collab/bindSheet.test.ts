@@ -56,16 +56,53 @@ describe('bindSheet', () => {
     host.setCell(0, 1, '2');
     const hostDoc = new CollabDoc();
     const hostBinding = bindSheet(host, hostDoc);
+    host.defineName('alpha', 0, 0);
     net.transport().connect(hostDoc, 'room');
-    hostBinding.seedFromEngine();
+    hostBinding.seed({ 1: { type: 'number' } });
 
     const guest = new SheetEngine();
     const guestDoc = new CollabDoc();
-    bindSheet(guest, guestDoc);
-    net.transport().connect(guestDoc, 'room'); // initial sync delivers the seeded cells
+    let guestColumn: { col: number; schema: unknown } | null = null;
+    bindSheet(guest, guestDoc, {
+      onColumnType: (col, schema) => {
+        guestColumn = { col, schema };
+      },
+    });
+    net.transport().connect(guestDoc, 'room'); // initial sync delivers the seeded state
 
     expect(guest.getRaw(0, 0)).toBe('1');
     expect(guest.getRaw(0, 1)).toBe('2');
+    expect(guest.coordOf('alpha')).toEqual({ row: 0, col: 0 }); // named ref seeded
+    expect(guestColumn).toEqual({ col: 1, schema: { type: 'number' } }); // column type seeded
+  });
+
+  it('propagates a named reference so a formula using it resolves on the peer', () => {
+    const { e2, b1 } = peerPair();
+    b1.setCell(0, 0, '10');
+    b1.defineName('sales', 0, 0);
+    b1.setCell(1, 0, '=sales*2');
+    expect(e2.coordOf('sales')).toEqual({ row: 0, col: 0 });
+    expect(e2.getValue(1, 0)).toBe(20);
+  });
+
+  it('delivers a remote column-type change via the callback', () => {
+    const net = createMemoryNetwork();
+    const e1 = new SheetEngine();
+    const e2 = new SheetEngine();
+    const d1 = new CollabDoc();
+    const d2 = new CollabDoc();
+    const b1 = bindSheet(e1, d1);
+    let received: { col: number; schema: unknown } | null = null;
+    bindSheet(e2, d2, {
+      onColumnType: (col, schema) => {
+        received = { col, schema };
+      },
+    });
+    net.transport().connect(d1, 'r');
+    net.transport().connect(d2, 'r');
+
+    b1.setColumnType(2, { type: 'date', dateFormat: 'YYYY-MM-DD' });
+    expect(received).toEqual({ col: 2, schema: { type: 'date', dateFormat: 'YYYY-MM-DD' } });
   });
 
   it('stops applying remote changes after destroy', () => {

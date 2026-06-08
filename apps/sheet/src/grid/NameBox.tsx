@@ -5,7 +5,9 @@ import styles from './NameBox.module.css';
 export interface NameBoxProps {
   engine: SheetEngine;
   active: { row: number; col: number };
-  onCommit: () => void;
+  /** Define a name for the active cell. The App owns the write so it can mirror
+   *  it to the collaboration doc when a session is active. */
+  onDefineName: (name: string, row: number, col: number) => void;
 }
 
 /**
@@ -13,7 +15,7 @@ export interface NameBoxProps {
  * lets the user name the cell. Names are the encouraged, structurally-stable
  * reference path (root CLAUDE.md §3.4). Existing names autocomplete via datalist.
  */
-export function NameBox({ engine, active, onCommit }: NameBoxProps) {
+export function NameBox({ engine, active, onDefineName }: NameBoxProps) {
   const [value, setValue] = useState('');
 
   useEffect(() => {
@@ -23,8 +25,7 @@ export function NameBox({ engine, active, onCommit }: NameBoxProps) {
   const commit = () => {
     const name = value.trim();
     if (name !== '' && name !== cellToA1(active)) {
-      engine.defineName(name, active.row, active.col);
-      onCommit();
+      onDefineName(name, active.row, active.col);
     }
   };
 

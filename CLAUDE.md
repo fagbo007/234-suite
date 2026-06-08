@@ -1079,6 +1079,26 @@ Format: `YYYY-MM-DD | Decision | Rationale | Alternatives considered`
              createCollabSession + per-app useState shim (rejected — more machinery
              than the dup it removes). React peerDep is optional so non-React
              consumers (the relay) are unaffected.
+
+2026-06-06 | Sheet collab breadth (backlog A6): bindSheet now syncs three Y.Maps —
+             cells (existing), names (name → "row,col", coords NEVER A1 per §3.4/
+             §16) and columnTypes (colIndex → JSON(schema)). Named refs live in the
+             engine (remote names → engine.defineName, so a peer resolves
+             =SUM(sales)); column types live in App state, so remote changes arrive
+             via an onColumnType callback. NameBox now raises onDefineName (App owns
+             the write, like FormulaBar); App.setColumnType + name definition route
+             through the binding; useSheetCollab takes the columnTypes snapshot +
+             onRemoteColumnType and exposes defineName/setColumnType; host seed()
+             carries cells + names + column types. |
+             Closes the formula-correctness gap (names) + the date-display gap
+             (column types) for collaborators. Off by default; proven via the
+             in-memory network (a seeded name resolves a formula on the guest;
+             column-type change fires the callback). |
+             Alternatives: store names as A1 (rejected — §16); move all Sheet
+             metadata to an App-owned effect like Slides (rejected — the hook-owned
+             binding already exists; threading columnTypes via a ref is contained).
+             DEFERRED (A6b): chart sync + Writer style-registry sync (Writer images
+             already sync as ProseMirror doc nodes).
 ```
 
 ---

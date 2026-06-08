@@ -14,18 +14,17 @@ afterEach(() => {
 describe('NameBox', () => {
   it('shows the active cell A1 by default', () => {
     engine = new SheetEngine();
-    render(<NameBox engine={engine} active={{ row: 0, col: 1 }} onCommit={vi.fn()} />);
+    render(<NameBox engine={engine} active={{ row: 0, col: 1 }} onDefineName={vi.fn()} />);
     expect((screen.getByLabelText('Cell name') as HTMLInputElement).value).toBe('B1');
   });
 
-  it('defines a name for the active cell on Enter', () => {
+  it('asks the App to define a name for the active cell on Enter', () => {
     engine = new SheetEngine();
-    const onCommit = vi.fn();
-    render(<NameBox engine={engine} active={{ row: 4, col: 2 }} onCommit={onCommit} />);
+    const onDefineName = vi.fn();
+    render(<NameBox engine={engine} active={{ row: 4, col: 2 }} onDefineName={onDefineName} />);
     const input = screen.getByLabelText('Cell name');
     fireEvent.change(input, { target: { value: 'revenue' } });
     fireEvent.keyDown(input, { key: 'Enter' });
-    expect(engine.coordOf('revenue')).toEqual({ row: 4, col: 2 });
-    expect(onCommit).toHaveBeenCalled();
+    expect(onDefineName).toHaveBeenCalledWith('revenue', 4, 2);
   });
 });
