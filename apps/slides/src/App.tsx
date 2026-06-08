@@ -12,8 +12,8 @@ import {
 import { type ChangeEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { slidesActions } from './ai/slidesActions';
 import { AnimationPanel } from './anim/AnimationPanel';
+import { useCollabSession } from '@234/collab';
 import { bindDeck, type DeckBinding } from './collab/bindDeck';
-import { useSlidesCollab } from './collab/useSlidesCollab';
 import { modelToPptxDeck, pptxDeckToModel } from './compat/pptxMap';
 import styles from './App.module.css';
 import { SlideCanvas } from './canvas/SlideCanvas';
@@ -57,7 +57,7 @@ export default function App() {
   const { settings: aiSettings, setSettings: setAiSettings, provider: aiProvider } = useAiSettings();
   const [importReport, setImportReport] = useState<ImportReport | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const collab = useSlidesCollab();
+  const collab = useCollabSession();
   const [collabOpen, setCollabOpen] = useState(false);
   const bindingRef = useRef<DeckBinding | null>(null);
   const applyingRemoteRef = useRef(false);

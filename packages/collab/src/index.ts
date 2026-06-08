@@ -18,3 +18,9 @@ export {
 export { createWebsocketTransport, type WebsocketOptions } from './transports/websocket';
 export { createWebrtcTransport, type WebrtcOptions } from './transports/webrtc';
 export { enableLocalPersistence, type LocalPersistence } from './persistence';
+export {
+  useCollabSession,
+  type CollabSession,
+  type CollabRole,
+  type TransportFactory,
+} from './useCollabSession';

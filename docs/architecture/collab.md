@@ -93,8 +93,9 @@ cross-peer WebRTC/relay sync is validated manually across instances.
   sync still pending**.
 - **Writer — DONE.** `apps/writer/src/collab/`: `writerCollab.ts`
   (`collabEditorPlugins` = `ySyncPlugin`/`yCursorPlugin`/`yUndoPlugin` + shared
-  editing keymaps; `seedFragmentFromDoc` for the host) and `useWriterCollab`
-  (session lifecycle, exposes the live `CollabDoc`). `Editor.tsx` reconfigures the
+  editing keymaps; `seedFragmentFromDoc` for the host) and the shared
+  `useCollabSession` hook (from `@234/collab`, exposes the live `CollabDoc`).
+  `Editor.tsx` reconfigures the
   view's plugins on enter/leave (solo `prosemirror-history` ⇄ collab y-undo);
   ySyncPlugin binds the doc to a `Y.XmlFragment`. Writer + Sheet share the
   promoted **`CollabPanel`** in `@234/shared`. `y-prosemirror` + `yjs` are pinned
@@ -107,12 +108,17 @@ cross-peer WebRTC/relay sync is validated manually across instances.
   object is its own map entry, so **concurrent edits to different objects on the
   same slide merge** (proven by an offline-edit-then-reconnect test); a single
   object is a JSON blob (per-object LWW — field-level merge is a future
-  refinement). `useSlidesCollab` owns the session; the App syncs via a single
-  `[deck]` push effect + a guarded remote `setDeck`, so no `setDeck` call site
-  changed.
+  refinement). The shared `useCollabSession` hook owns the session; the App syncs
+  via a single `[deck]` push effect + a guarded remote `setDeck`, so no `setDeck`
+  call site changed.
+
+Writer and Slides share **`useCollabSession`** (`@234/collab`) — one model-free
+session hook (start/join/leave, exposes the live `CollabDoc`; WebRTC default,
+relay URL → WebSocket). Sheet keeps its own `useSheetCollab` because it also
+routes local cell writes through the binding (`setCell`).
+
 - Presence cursors, permissions, conflict-UX polish; field-level (within-object)
-  merge; serverless LAN (mDNS) discovery; deploying the relay as a service;
-  unifying the Writer/Slides session hooks.
+  merge; serverless LAN (mDNS) discovery; deploying the relay as a service.
 
 > **Collaboration is now live in all three apps** (Sheet · Writer · Slides) on the
 > shared `@234/collab` core + relay. Real cross-peer sync over WebRTC/relay is the

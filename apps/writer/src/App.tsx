@@ -28,7 +28,7 @@ import { ImagePanel } from './editor/ImagePanel';
 import { StyleEditor } from './editor/StyleEditor';
 import { defaultStyleRegistry, setActiveStyleRegistry, type StyleRegistry } from './editor/styles';
 import { writerActions } from './ai/writerActions';
-import { useWriterCollab } from './collab/useWriterCollab';
+import { useCollabSession } from '@234/collab';
 
 export default function App() {
   const palette = useCommandPalette();
@@ -40,7 +40,7 @@ export default function App() {
   const [importReport, setImportReport] = useState<ImportReport | null>(null);
   const ai = useAiSidebar('writer');
   const { settings: aiSettings, setSettings: setAiSettings, provider: aiProvider } = useAiSettings();
-  const collab = useWriterCollab();
+  const collab = useCollabSession();
   const [collabOpen, setCollabOpen] = useState(false);
 
   const viewRef = useRef<EditorView | null>(null);

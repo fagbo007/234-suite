@@ -1,31 +1,31 @@
 /**
- * Session lifecycle for Writer collaboration. Owns a `CollabDoc` + transport +
- * role and exposes the live doc; the editor binds it via y-prosemirror (see
- * `writerCollab.ts` + `Editor.tsx`). Model-free — unlike Sheet there is no
- * `setCell`; ySyncPlugin drives the document. Opt-in / off by default (root §17).
+ * Shared React session hook for collaboration (root §17). Owns a `CollabDoc` +
+ * transport + role and exposes the live doc; the app binds the doc to its model
+ * (y-prosemirror for Writer, `bindDeck` for Slides). Model-free — apps that need
+ * to route local edits (e.g. Sheet's `setCell`) wrap their own binding on top.
+ * Opt-in / off by default; nothing connects until start/join.
  *
  * Default transport: WebRTC peer; a relay URL switches to WebSocket.
- * `transportFactory` is injectable so tests use an in-memory network.
+ * `transportFactory` is injectable so tests drive it with an in-memory network.
  */
-import {
-  CollabDoc,
-  type CollabTransport,
-  createWebrtcTransport,
-  createWebsocketTransport,
-  generateSessionCode,
-  parseSessionCode,
-} from '@234/collab';
 import { useCallback, useRef, useState } from 'react';
+import { CollabDoc } from './doc';
+import { generateSessionCode, parseSessionCode } from './session';
+import { type CollabTransport } from './transport';
+import { createWebrtcTransport } from './transports/webrtc';
+import { createWebsocketTransport } from './transports/websocket';
 
 export type CollabRole = 'idle' | 'host' | 'guest';
 export type TransportFactory = (relayUrl?: string) => CollabTransport;
 
-export interface WriterCollab {
+export interface CollabSession {
   active: boolean;
   role: CollabRole;
   code: string | null;
   doc: CollabDoc | null;
+  /** Start hosting a new session; returns the shareable code. */
   start: () => string;
+  /** Join an existing session by code; returns an error message or `null`. */
   join: (code: string, relayUrl?: string) => string | null;
   leave: () => void;
 }
@@ -33,7 +33,9 @@ export interface WriterCollab {
 const defaultFactory: TransportFactory = (relayUrl) =>
   relayUrl ? createWebsocketTransport({ url: relayUrl }) : createWebrtcTransport();
 
-export function useWriterCollab(opts: { transportFactory?: TransportFactory } = {}): WriterCollab {
+export function useCollabSession(
+  opts: { transportFactory?: TransportFactory } = {},
+): CollabSession {
   const [role, setRole] = useState<CollabRole>('idle');
   const [code, setCode] = useState<string | null>(null);
   const [doc, setDoc] = useState<CollabDoc | null>(null);

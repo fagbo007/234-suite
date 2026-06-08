@@ -1,13 +1,14 @@
-import { createMemoryNetwork } from '@234/collab';
+// @vitest-environment jsdom
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { useWriterCollab } from './useWriterCollab';
+import { createMemoryNetwork } from './transport';
+import { useCollabSession } from './useCollabSession';
 
-describe('useWriterCollab', () => {
+describe('useCollabSession', () => {
   it('starts a host session with a code and a live doc', () => {
     const net = createMemoryNetwork();
     const { result } = renderHook(() =>
-      useWriterCollab({ transportFactory: () => net.transport() }),
+      useCollabSession({ transportFactory: () => net.transport() }),
     );
     expect(result.current.active).toBe(false);
     expect(result.current.doc).toBeNull();
@@ -25,7 +26,7 @@ describe('useWriterCollab', () => {
   it('rejects an invalid join code and stays idle', () => {
     const net = createMemoryNetwork();
     const { result } = renderHook(() =>
-      useWriterCollab({ transportFactory: () => net.transport() }),
+      useCollabSession({ transportFactory: () => net.transport() }),
     );
     let error: string | null = null;
     act(() => {
@@ -38,7 +39,7 @@ describe('useWriterCollab', () => {
   it('leaves a session and clears the doc', () => {
     const net = createMemoryNetwork();
     const { result } = renderHook(() =>
-      useWriterCollab({ transportFactory: () => net.transport() }),
+      useCollabSession({ transportFactory: () => net.transport() }),
     );
     act(() => {
       result.current.start();

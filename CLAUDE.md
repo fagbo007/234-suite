@@ -1063,6 +1063,22 @@ Format: `YYYY-MM-DD | Decision | Rationale | Alternatives considered`
              refinement); keep slide-granular (rejected — A4 goal). syncOrder only
              rewrites a Y.Array when its sequence changed, avoiding spurious order
              conflicts when peers leave ordering untouched.
+
+2026-06-06 | Unified the Writer/Slides session hooks (backlog A7): the identical
+             useWriterCollab/useSlidesCollab are replaced by a single
+             useCollabSession exported from @234/collab (model-free start/join/
+             leave + live CollabDoc; WebRTC default, relay URL → WebSocket). The
+             collab package gains React as an OPTIONAL peerDependency + a jsdom-
+             docblock hook test (its core tests stay node-env). Sheet keeps its own
+             useSheetCollab (it also routes setCell through the binding). |
+             Removes ~150 lines of duplication; the hook's natural home is the
+             collaboration package, not the design system (which stays React-only,
+             collab-free besides the dumb CollabPanel). |
+             Alternatives: host it in @234/shared (rejected — would make the design
+             system depend on a feature lib + yjs); a framework-agnostic
+             createCollabSession + per-app useState shim (rejected — more machinery
+             than the dup it removes). React peerDep is optional so non-React
+             consumers (the relay) are unaffected.
 ```
 
 ---
