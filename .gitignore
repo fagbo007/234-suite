@@ -18,6 +18,9 @@ packages/ai-backend/Cargo.lock
 # Suite installer output (also covered by dist/ above; explicit for clarity)
 installer/dist/
 
+# Generated docs site (also covered by dist/ above; explicit for clarity)
+packages/docs-site/dist/
+
 # Test / coverage artifacts
 coverage/
 playwright-report/

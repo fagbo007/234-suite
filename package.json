@@ -19,6 +19,7 @@
     "bench:sheet": "pnpm --filter @234/sheet bench",
     "bench:slides": "pnpm --filter @234/slides bench",
     "validate:templates": "pnpm --filter @234/slides validate:templates",
+    "docs:build": "pnpm --filter @234/docs-site build",
     "lint": "eslint .",
     "format": "prettier --write .",
     "typecheck": "tsc -b",

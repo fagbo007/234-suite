@@ -16,6 +16,8 @@ export default tseslint.config(
       '**/src-tauri/gen/**',
       // Author tooling — plain Node ESM, run manually to generate templates.
       'apps/slides/templates/scaffold.mjs',
+      // Docs-site generator — plain Node ESM author tooling.
+      'packages/docs-site/build.mjs',
       // Collaboration relay — standalone Node server, run manually.
       'packages/collab/relay/**',
       // Repo tooling scripts (checks, session-start) — plain Node ESM.

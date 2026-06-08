@@ -1186,6 +1186,36 @@ Format: `YYYY-MM-DD | Decision | Rationale | Alternatives considered`
              build; `pnpm checks` 0/0. DEFERRED (Phase-4-proper): dynamic/remote
              discovery + sandbox (needs the Tauri backend), an enable/disable
              settings UI, a host key-storage capability for cloud-provider plugins.
+
+2026-06-08 | Docs site (backlog A9 — §9 "Docs site generated from source comments
+             and architecture docs"): new dev-only `@234/docs-site`
+             (`packages/docs-site`) aggregates the repo's markdown (README,
+             CHANGELOG, the docs/ guides + ADRs, CODE_OF_CONDUCT, SECURITY, LICENSE
+             — CLAUDE.md intentionally excluded as internal agent context) plus a
+             per-package API overview (each `src/index.ts` header comment + exported
+             names) into a static, offline HTML site styled with the suite's own
+             inlined design tokens (dark by default). Pure, fs-free core in
+             `src/site.ts` (marked→HTML, header/exports extraction, intra-repo
+             `.md`→`.html` link rewriting, page shell, `buildPages`) is unit-tested
+             (13 tests); the eslint-ignored `build.mjs` is the fs glue and writes to
+             `dist/site/` (gitignored build artifact). `pnpm docs:build`
+             (`tsc -b && node build.mjs`) generated 25 pages (18 docs + 6 packages),
+             verified: index, per-doc + per-package pages, exports listed, links
+             rewritten, active-nav, tokens + `data-theme="dark"` inlined. |
+             Delivers the §9 docs-site deliverable on-brand (in-house Node ESM
+             generator like scaffold.mjs/checks.mjs + tested pure helpers like
+             validate.ts) and dependency-light — one MIT dep (`marked`) confined to
+             a dev package, never in the apps' bundles, so the suite stays MIT and
+             the apps stay lean. |
+             Alternatives: a heavyweight generator (Docusaurus/VitePress/Starlight —
+             rejected, large dep tree, fights the lean ethos); a hand-rolled markdown
+             renderer (rejected by owner — fragile across tables/code/nested lists);
+             committing the generated site (rejected — build artifact, generator is
+             the source of truth). build.mjs imports the compiled `dist/src/site.js`
+             directly (its only import is the bare `marked` — avoids Node ESM's
+             extensionless-relative-import failure on `index.js`). DEFERRED: full
+             per-symbol TypeScript API docs (TypeDoc), search, versioning, a hosted
+             deploy/CI publish step. docs-site 13 tests; full suite green; checks 0/0.
 ```
 
 ---

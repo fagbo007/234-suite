@@ -26,3 +26,10 @@ expand on individual decisions.
 - [`../contributing.md`](../contributing.md) — how to contribute + the repo rules
 - [`../triage.md`](../triage.md) — issue triage workflow and label scheme
 - [`../formula-compat.md`](../formula-compat.md) — 234 Sheet formula support table
+
+## Generated docs site
+
+These docs (plus the root guides and a per-package API overview) are aggregated
+into a static, offline HTML site by **`@234/docs-site`** (root §9). Build it with
+`pnpm docs:build` → open `packages/docs-site/dist/site/index.html`. The generator
+(`packages/docs-site/`) is the source of truth; the site is a build artifact.
