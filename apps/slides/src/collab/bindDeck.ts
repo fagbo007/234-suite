@@ -1,18 +1,23 @@
 /**
  * Binds the Slides `Deck` to a nested Yjs structure (the Slides mapping in
- * docs/architecture/collab.md), at **object granularity** so concurrent edits to
- * different objects on the same slide merge instead of clobbering:
+ * docs/architecture/collab.md), at **field granularity** so concurrent edits to
+ * different fields of the *same* object merge instead of clobbering:
  *
  *   order        : Y.Array<slideId>                       — slide order
  *   slides       : Y.Map<slideId → slideMap>
  *     slideMap.notes        : string
  *     slideMap.objectOrder  : Y.Array<objectId>           — z-order within the slide
- *     slideMap.objects      : Y.Map<objectId → JSON(SlideObject)>
+ *     slideMap.objects      : Y.Map<objectId → Y.Map<fieldName → value>>
  *
- * Each object is its own `Y.Map` entry, so two peers editing different objects on
- * the same slide both survive a merge. A single object is stored as a JSON blob
- * (per-object last-write-wins — field-level merge is a future refinement). Local
- * pushes carry a `LOCAL` transaction origin so the remote listener ignores them.
+ * Each object is its own `Y.Map` whose keys are the object's scalar fields
+ * (`x`/`y`/`width`/`height`/`kind`/`text`/`fontSize`/`fill`/`src`, plus
+ * `animations` as a single JSON-string field). So two peers editing different
+ * objects — or different fields of the same object (A drags `x`, B edits
+ * `fontSize`) — all survive a merge. Local pushes carry a `LOCAL` transaction
+ * origin so the remote listener ignores them.
+ *
+ * No cross-version migration: the collab doc is ephemeral session state (the
+ * `.fwsl` file is the on-disk source of truth) and both peers run one code version.
  */
 import { type CollabDoc, Y } from '@234/collab';
 import { type Deck, type Slide, type SlideObject } from '../model/types';
@@ -28,8 +33,28 @@ export interface DeckBinding {
 }
 
 type YSlide = Y.Map<unknown>;
-type YObjects = Y.Map<string>;
+type YObjectFields = Y.Map<unknown>;
+type YObjects = Y.Map<YObjectFields>;
 type YOrder = Y.Array<string>;
+
+/** Flatten an object to its stored fields (`animations` → a JSON-string field). */
+function objToFields(object: SlideObject): Record<string, unknown> {
+  const fields: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(object)) {
+    if (value === undefined) continue;
+    fields[key] = key === 'animations' ? JSON.stringify(value) : value;
+  }
+  return fields;
+}
+
+/** Rebuild an object from its field map (`animations` parsed back from JSON). */
+function fieldsToObj(objMap: YObjectFields): SlideObject {
+  const out: Record<string, unknown> = {};
+  objMap.forEach((value, key) => {
+    out[key] = key === 'animations' ? JSON.parse(value as string) : value;
+  });
+  return out as unknown as SlideObject;
+}
 
 /** Rewrite a Y.Array of ids only when the sequence actually changed (avoids
  *  spurious order conflicts when two peers leave the order untouched). */
@@ -59,8 +84,8 @@ export function bindDeck(doc: CollabDoc, onRemoteChange: (deck: Deck) => void): 
       const objs: SlideObject[] = [];
       if (objects && objectOrder) {
         for (const objectId of objectOrder.toArray()) {
-          const json = objects.get(objectId);
-          if (json) objs.push(JSON.parse(json) as SlideObject);
+          const objMap = objects.get(objectId);
+          if (objMap) objs.push(fieldsToObj(objMap));
         }
       }
       const slide: Slide = { id: slideId, objects: objs };
@@ -89,7 +114,7 @@ export function bindDeck(doc: CollabDoc, onRemoteChange: (deck: Deck) => void): 
 
         let objects = slideMap.get('objects') as YObjects | undefined;
         if (!objects) {
-          objects = new Y.Map<string>();
+          objects = new Y.Map<YObjectFields>();
           slideMap.set('objects', objects);
         }
         let objectOrder = slideMap.get('objectOrder') as YOrder | undefined;
@@ -101,8 +126,20 @@ export function bindDeck(doc: CollabDoc, onRemoteChange: (deck: Deck) => void): 
         const objectIds = slide.objects.map((o) => o.id);
         syncOrder(objectOrder, objectIds);
         for (const object of slide.objects) {
-          const json = JSON.stringify(object);
-          if (objects.get(object.id) !== json) objects.set(object.id, json);
+          let objMap = objects.get(object.id);
+          if (!objMap) {
+            objMap = new Y.Map<unknown>();
+            objects.set(object.id, objMap);
+          }
+          // Set each changed field; delete fields no longer present. Distinct
+          // fields are distinct Y.Map keys, so concurrent field edits merge.
+          const fields = objToFields(object);
+          for (const [key, value] of Object.entries(fields)) {
+            if (objMap.get(key) !== value) objMap.set(key, value);
+          }
+          for (const key of [...objMap.keys()]) {
+            if (!(key in fields)) objMap.delete(key);
+          }
         }
         for (const key of [...objects.keys()]) {
           if (!objectIds.includes(key)) objects.delete(key);

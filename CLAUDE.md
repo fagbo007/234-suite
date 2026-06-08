@@ -1286,6 +1286,26 @@ Format: `YYYY-MM-DD | Decision | Rationale | Alternatives considered`
              formula-engine 80 tests (+13); 10k-cell §8 gate still <500ms; 60fps held;
              Sheet builds; `pnpm checks` 0/0. Compat table updated. DEFERRED:
              `NETWORKDAYS` (holidays), dynamic arrays/spill, `XLOOKUP` wildcard modes.
+
+2026-06-08 | Slides collab field-level CRDT merge (the last collab merge gap — the
+             A4 follow-up): `bindDeck` now stores each slide object as a nested
+             `Y.Map<field → value>` (was one JSON blob), so concurrent edits to
+             *different fields of the same object* merge (A drags `x`, B edits
+             `fontSize` → both survive) instead of per-object last-write-wins.
+             Scalar fields are primitive Y.Map entries; `animations` is a single
+             JSON-string field (per-field LWW). Helpers `objToFields`/`fieldsToObj`;
+             `pushDeck` sets changed fields + deletes removed ones; `objectOrder`/
+             `notes`/`order` unchanged. The binding's public interface
+             (pushDeck/readDeck/seed/destroy) is unchanged → App/useSlidesCollab/
+             CollabPanel untouched. |
+             Completes Slides merge correctness with a contained, verifiable change
+             (one file + a field-level offline-reconnect test). |
+             Alternatives: field-level merge inside the `animations` array too
+             (deferred — array stays a per-field JSON blob); cross-version doc
+             migration (rejected — collab docs are ephemeral session state, the
+             `.fwsl` file is the source of truth, both peers run one code version).
+             Slides 80 tests (+1 field-level merge); 100-slide gate held; Slides
+             builds; `pnpm checks` 0/0. Real two-peer is the manual step.
 ```
 
 ---

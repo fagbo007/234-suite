@@ -105,16 +105,17 @@ cross-peer WebRTC/relay sync is validated manually across instances.
   `Y.Map<styleId → JSON(Style)>` wired with a `[registry]` push effect + a guarded
   remote `setRegistry` (block `styleId` attrs + images already sync as doc nodes),
   so a peer renders styled blocks correctly. Cursor-presence UI styling is deferred.
-- **Slides — DONE (object-level).** `apps/slides/src/collab/`: `bindDeck(doc,
+- **Slides — DONE (field-level).** `apps/slides/src/collab/`: `bindDeck(doc,
   onRemoteChange)` maps the deck to nested Yjs — `order` (`Y.Array<slideId>`) +
   `slides` (`Y.Map<slideId → slideMap>`), each `slideMap` holding `notes`, an
-  `objectOrder` `Y.Array`, and an `objects` `Y.Map<objectId → JSON(object)>`. Each
-  object is its own map entry, so **concurrent edits to different objects on the
-  same slide merge** (proven by an offline-edit-then-reconnect test); a single
-  object is a JSON blob (per-object LWW — field-level merge is a future
-  refinement). The shared `useCollabSession` hook owns the session; the App syncs
-  via a single `[deck]` push effect + a guarded remote `setDeck`, so no `setDeck`
-  call site changed.
+  `objectOrder` `Y.Array`, and an `objects` `Y.Map<objectId → Y.Map<field →
+  value>>`. Each object is its own `Y.Map` whose keys are the object's scalar
+  fields (`x`/`y`/.../`fontSize`/`fill`/`src`; `animations` as a JSON-string
+  field), so **concurrent edits to different objects — or to different fields of
+  the same object — all merge** (proven by offline-edit-then-reconnect tests at
+  both object and field granularity). The shared `useCollabSession` hook owns the
+  session; the App syncs via a single `[deck]` push effect + a guarded remote
+  `setDeck`, so no `setDeck` call site changed.
 
 Writer and Slides share **`useCollabSession`** (`@234/collab`) — one model-free
 session hook (start/join/leave, exposes the live `CollabDoc`; WebRTC default,
@@ -140,8 +141,9 @@ Sheet syncs cells + named refs + column types + chart; Writer syncs the document
 syncs the deck at object granularity. **Collaboration breadth is complete.**
 
 - Follow-a-peer / viewport-follow, typing indicators; permissions, conflict-UX
-  polish; field-level (within-object) merge; registry `styleOrder`; serverless LAN
-  (mDNS) discovery; deploying the relay.
+  polish; field-level merge *within* the Slides `animations` array (objects now
+  merge field-by-field); registry `styleOrder`; serverless LAN (mDNS) discovery;
+  deploying the relay.
 
 > **Collaboration is now live in all three apps** (Sheet · Writer · Slides) on the
 > shared `@234/collab` core + relay. Real cross-peer sync over WebRTC/relay is the

@@ -110,4 +110,35 @@ describe('bindDeck', () => {
       expect(o2?.x).toBe(200);
     }
   });
+
+  it('merges concurrent edits to different FIELDS of the same object (field-level CRDT)', () => {
+    const net = createMemoryNetwork();
+    const d1 = new CollabDoc();
+    const d2 = new CollabDoc();
+    const b1 = bindDeck(d1, () => {});
+    const b2 = bindDeck(d2, () => {});
+    const t1 = net.transport();
+    const t2 = net.transport();
+    t1.connect(d1, 'r');
+    t2.connect(d2, 'r');
+
+    // One object, shared starting point (x=0, fontSize=20).
+    const base: Deck = { slides: [{ id: 's1', objects: [text('o1')] }] };
+    b1.pushDeck(base);
+
+    // Peer 2 offline; each peer edits a DIFFERENT field of the same object o1.
+    t2.disconnect();
+    b1.pushDeck({ slides: [{ id: 's1', objects: [{ ...text('o1'), x: 100 }] }] }); // A moves x
+    const o1Bigger: SlideObject = { id: 'o1', kind: 'text', x: 0, y: 0, width: 100, height: 40, text: 'hi', fontSize: 48 };
+    b2.pushDeck({ slides: [{ id: 's1', objects: [o1Bigger] }] }); // B resizes font
+
+    // Reconnect → both field edits survive on both peers (no whole-object clobber).
+    t2.connect(d2, 'r');
+
+    for (const read of [b1.readDeck(), b2.readDeck()]) {
+      const o1 = read.slides[0]?.objects.find((o) => o.id === 'o1');
+      expect(o1?.x).toBe(100);
+      expect((o1 as { fontSize?: number } | undefined)?.fontSize).toBe(48);
+    }
+  });
 });
