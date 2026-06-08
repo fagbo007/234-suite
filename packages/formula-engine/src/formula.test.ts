@@ -120,3 +120,79 @@ describe('dates (serial day-counts since 1970-01-01)', () => {
     expect(() => evalNum('DATEDIF(0, 1, "x")')).toThrow('#VALUE!');
   });
 });
+
+describe('more text functions', () => {
+  it('MID extracts (1-based) and errors on start < 1', () => {
+    expect(evalNum('MID("hello", 2, 3)')).toBe('ell');
+    expect(evalNum('MID("hello", 4, 10)')).toBe('lo'); // len past the end clamps
+    expect(() => evalNum('MID("hello", 0, 2)')).toThrow('#VALUE!');
+  });
+
+  it('SUBSTITUTE replaces all or the nth occurrence', () => {
+    expect(evalNum('SUBSTITUTE("a-b-c", "-", "+")')).toBe('a+b+c');
+    expect(evalNum('SUBSTITUTE("a-b-c", "-", "+", 2)')).toBe('a-b+c');
+    expect(evalNum('SUBSTITUTE("abc", "", "x")')).toBe('abc'); // empty old → unchanged
+  });
+
+  it('TEXTJOIN joins with a delimiter, optionally skipping empties', () => {
+    expect(evalNum('TEXTJOIN("-", 0, "a", "", "b")')).toBe('a--b');
+    expect(evalNum('TEXTJOIN("-", 1, "a", "", "b")')).toBe('a-b'); // ignore empty
+  });
+
+  it('FIND is 1-based + case-sensitive; #VALUE! when absent', () => {
+    expect(evalNum('FIND("l", "hello")')).toBe(3);
+    expect(evalNum('FIND("l", "hello", 4)')).toBe(4);
+    expect(() => evalNum('FIND("z", "hello")')).toThrow('#VALUE!');
+  });
+});
+
+describe('more date functions', () => {
+  it('WEEKDAY returns the day of week per type', () => {
+    // 2026-06-04 is a Thursday.
+    const thu = 'DATE(2026, 6, 4)';
+    expect(evalNum(`WEEKDAY(${thu})`)).toBe(5); // type 1: Sun=1..Sat=7
+    expect(evalNum(`WEEKDAY(${thu}, 2)`)).toBe(4); // type 2: Mon=1..Sun=7
+    expect(evalNum(`WEEKDAY(${thu}, 3)`)).toBe(3); // type 3: Mon=0..Sun=6
+    expect(() => evalNum(`WEEKDAY(${thu}, 9)`)).toThrow('#NUM!');
+  });
+
+  it('EDATE shifts months and clamps the day to the month end', () => {
+    expect(evalNum('EDATE(DATE(2026, 1, 15), 1)')).toBe(Number(evalNum('DATE(2026, 2, 15)')));
+    // Jan 31 + 1 month → Feb 28 (2026 is not a leap year).
+    expect(evalNum('EDATE(DATE(2026, 1, 31), 1)')).toBe(Number(evalNum('DATE(2026, 2, 28)')));
+    expect(evalNum('EDATE(DATE(2026, 3, 10), 0-1)')).toBe(Number(evalNum('DATE(2026, 2, 10)')));
+  });
+
+  it('EOMONTH returns the last day of the shifted month', () => {
+    expect(evalNum('EOMONTH(DATE(2026, 2, 10), 0)')).toBe(Number(evalNum('DATE(2026, 2, 28)')));
+    expect(evalNum('EOMONTH(DATE(2024, 2, 1), 0)')).toBe(Number(evalNum('DATE(2024, 2, 29)'))); // leap
+    expect(evalNum('EOMONTH(DATE(2026, 1, 15), 1)')).toBe(Number(evalNum('DATE(2026, 2, 28)')));
+  });
+
+  it('TODAY / NOW read the injected clock (deterministic)', () => {
+    // A fixed instant: 2026-06-04T06:00:00Z.
+    const ms = Date.UTC(2026, 5, 4, 6, 0, 0);
+    const evalAt = (src: string) => evaluateFormula(src, () => null, undefined, () => ms);
+    const day = Number(evalAt('DATE(2026, 6, 4)'));
+    expect(evalAt('TODAY()')).toBe(day); // whole-day serial
+    expect(evalAt('NOW()')).toBeCloseTo(day + 0.25, 6); // 06:00 = quarter day
+    expect(evalAt('YEAR(NOW())')).toBe(2026); // date components floor the fraction
+    expect(evalAt('DAY(NOW())')).toBe(4);
+  });
+});
+
+describe('IFS (multi-branch, lazy)', () => {
+  it('returns the first matching value', () => {
+    expect(evalNum('IFS(0, 1, 1, 2, 1, 3)')).toBe(2);
+    expect(evalNum('IFS(2>3, 10, 5>4, 20)')).toBe(20);
+  });
+
+  it('short-circuits — later conditions + values are not evaluated', () => {
+    // The matched branch wins before the erroring condition/value are reached.
+    expect(evalNum('IFS(1, 42, 1/0, 99)')).toBe(42);
+  });
+
+  it('no match → #N/A', () => {
+    expect(() => evalNum('IFS(0, 1, 0, 2)')).toThrow('#N/A');
+  });
+});

@@ -1266,6 +1266,26 @@ Format: `YYYY-MM-DD | Decision | Rationale | Alternatives considered`
              `ci.yml`), not artifact-verified locally. DEFERRED: code signing /
              notarization / Authenticode, auto-update, a suite-level AppImage
              (per-app AppImages ship via CI), running CI (needs the public remote).
+
+2026-06-08 | Formula breadth (extend the in-house MIT evaluator — Sheet §2): added
+             text `TEXTJOIN`/`MID`/`SUBSTITUTE`/`FIND`, dates `WEEKDAY`/`EDATE`/
+             `EOMONTH` + clock-backed `TODAY`/`NOW`, multi-branch lazy `IFS`, and the
+             multi-criteria `SUMIFS`/`COUNTIFS`/`AVERAGEIFS` family. `evaluateFormula`
+             gained an optional `now: () => number` clock (default `Date.now`, so the
+             engine's 3-arg calls are unchanged; tests inject a fixed clock for
+             determinism); `serialToYmd` now floors (was round) so a fractional `NOW`
+             serial maps to its day. `TODAY` is a whole-day serial, `NOW` carries the
+             time-of-day fraction. `IFS` short-circuits like `IF` (only the matched
+             value is evaluated → no spurious errors). |
+             Closes most of the compat table's "planned" list with pure, fully-tested
+             engine work; the public `SheetEngine` API is unchanged so apps/sheet
+             needs no changes. |
+             Alternatives: implementing `NOW` as date-only (rejected — a fractional
+             serial is more correct and `serialToYmd` floors cleanly); eager `IFS`
+             (rejected — must short-circuit to avoid evaluating erroring branches).
+             formula-engine 80 tests (+13); 10k-cell §8 gate still <500ms; 60fps held;
+             Sheet builds; `pnpm checks` 0/0. Compat table updated. DEFERRED:
+             `NETWORKDAYS` (holidays), dynamic arrays/spill, `XLOOKUP` wildcard modes.
 ```
 
 ---

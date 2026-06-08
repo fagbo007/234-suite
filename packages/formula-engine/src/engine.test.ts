@@ -221,4 +221,32 @@ describe('SheetEngine', () => {
     expect(engine.evaluate('NOPE(1)')).toBe('#NAME?'); // error code, never throws
     expect(engine.evaluate('')).toBeNull();
   });
+
+  it('evaluates the multi-criteria COUNTIFS / SUMIFS / AVERAGEIFS over ranges', () => {
+    engine = new SheetEngine();
+    [5, 15, 20, 8, 25].forEach((v, r) => engine!.setCell(r, 0, String(v))); // A1:A5
+    [1, 2, 1, 2, 1].forEach((v, r) => engine!.setCell(r, 1, String(v))); // B1:B5 (group)
+    // Rows where A>10 AND B=1: A2? B2=2 no; A3=20,B3=1 yes; A5=25,B5=1 yes → 2 rows.
+    engine.setCell(0, 2, '=COUNTIFS(A1:A5, >10, B1:B5, 1)'); // → 2
+    engine.setCell(1, 2, '=SUMIFS(A1:A5, A1:A5, >10, B1:B5, 1)'); // 20+25 → 45
+    engine.setCell(2, 2, '=AVERAGEIFS(A1:A5, A1:A5, >10, B1:B5, 1)'); // 45/2 → 22.5
+
+    expect(engine.getValue(0, 2)).toBe(2);
+    expect(engine.getValue(1, 2)).toBe(45);
+    expect(engine.getValue(2, 2)).toBe(22.5);
+  });
+
+  it('evaluates IFS and the clock-backed TODAY over cells', () => {
+    engine = new SheetEngine();
+    engine.setCell(0, 0, '72'); // A1 — a score
+    engine.setCell(0, 1, '=IFS(A1>=90, 4, A1>=70, 3, A1>=50, 2)'); // → 3
+    expect(engine.getValue(0, 1)).toBe(3);
+
+    // TODAY() uses the engine's default clock — assert it is a plausible serial
+    // (days since 1970-01-01; ~20000 by the mid-2020s) without pinning the date.
+    engine.setCell(1, 0, '=TODAY()');
+    const today = engine.getValue(1, 0);
+    expect(typeof today).toBe('number');
+    expect(today as number).toBeGreaterThan(20000);
+  });
 });

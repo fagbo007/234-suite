@@ -23,13 +23,13 @@
 | Comparisons `= <> < <= > >=` | Supported | Booleans are numeric — TRUE = 1, FALSE = 0 |
 | `SUM`, `AVERAGE`, `COUNT` | Supported | Ranges + arguments; AVERAGE ignores empty cells |
 | `MIN`, `MAX` | Supported | Over ranges/arguments; empty → 0 |
-| `IF` | Supported | `IF(cond, then[, else])` — **lazy** branches (untaken branch not evaluated) |
+| `IF`, `IFS` | Supported | `IF(cond, then[, else])` and `IFS(cond1, val1, …)` — **lazy / short-circuit** (untaken branches not evaluated); `IFS` with no match → `#N/A` |
 | `AND`, `OR`, `NOT` | Supported | Nonzero is true; return 1/0 |
 | `ABS`, `INT`, `SQRT`, `POWER`, `MOD`, `ROUND` | Supported | Scalar math; `ROUND(x, digits=0)`; `MOD`/`SQRT` error on invalid input |
-| `COUNTIF`, `SUMIF`, `AVERAGEIF` | Supported | `(range, criteria[, sum_range])`; criteria is a comparison (`>10`, `<>0`), a value, or text (`"apple"`) |
+| `COUNTIF(S)`, `SUMIF(S)`, `AVERAGEIF(S)` | Supported | Single: `(range, criteria[, sum_range])`. Multi: `COUNTIFS(crit_range1, crit1, …)`, `SUMIFS(sum_range, crit_range1, crit1, …)` — criteria AND across pairs. Criteria is a comparison (`>10`), a value, or text |
 | Text: string literals, `&` concat, comparisons | Supported | Values are `number \| string`; string comparisons are case-insensitive; mixed types rank number < text |
-| `CONCAT`, `CONCATENATE`, `LEN`, `UPPER`, `LOWER`, `TRIM`, `LEFT`, `RIGHT` | Supported | Text functions |
-| `DATE`, `DATEVALUE`, `YEAR`, `MONTH`, `DAY`, `DATEDIF` | Supported | Dates are serial day-counts since 1970-01-01; `DATEVALUE` parses ISO `YYYY-MM-DD`; `DATEDIF` unit `"d"`/`"m"`/`"y"`. No auto-coercion — `DATEVALUE` is explicit (§2.2) |
+| `CONCAT`, `CONCATENATE`, `TEXTJOIN`, `LEN`, `UPPER`, `LOWER`, `TRIM`, `LEFT`, `RIGHT`, `MID`, `SUBSTITUTE`, `FIND` | Supported | Text functions; `TEXTJOIN(delim, ignore_empty, …)`; `SUBSTITUTE(text, old, new[, nth])`; `FIND` is 1-based + case-sensitive |
+| `DATE`, `DATEVALUE`, `YEAR`, `MONTH`, `DAY`, `DATEDIF`, `WEEKDAY`, `EDATE`, `EOMONTH`, `TODAY`, `NOW` | Supported | Dates are serial day-counts since 1970-01-01; `DATEVALUE` parses ISO `YYYY-MM-DD`; `DATEDIF` unit `"d"`/`"m"`/`"y"`; `WEEKDAY` types 1/2/3; `EDATE`/`EOMONTH` shift months (day clamped to month-end). `TODAY`/`NOW` read an injected clock (`NOW` carries a fractional time-of-day; `TODAY` is a whole-day serial). No auto-coercion — `DATEVALUE` is explicit (§2.2) |
 | `VLOOKUP`, `HLOOKUP`, `XLOOKUP`, `INDEX`, `MATCH` | Supported | **Default exact match** (Excel defaults to approximate); approximate via the optional last arg (sorted data). `XLOOKUP` takes a separate return range + optional if-not-found. 1-based indices; `#N/A` / `#REF!` on miss / bad index |
 | Cell / range references | Supported | Stored as named refs / coordinates; A1 display-only (see `formula-refs.md`) |
 | Error codes | Supported | `#DIV/0!`, `#NAME?` (unknown fn), `#NUM!`, `#CYCLE!`, `#VALUE!`, `#N/A`, `#REF!`, `#ERROR!` |
@@ -40,10 +40,9 @@ Performance: evaluating 10,000 formula cells is gated under 500ms (root §8).
 
 | Function group | 234 Sheet phase |
 |---|---|
-| `TEXTJOIN`, `MID`, `SUBSTITUTE`, `FIND` | Phase 2+ |
-| `TODAY`, `NOW` | Phase 2+ (need an injected clock to stay deterministic/testable) |
-| `EDATE`, `EOMONTH`, `WEEKDAY`, `NETWORKDAYS` | Phase 2+ |
+| `NETWORKDAYS` (needs holiday handling) | Phase 2+ |
 | Dynamic arrays / spill (`FILTER`, `SORT`, `UNIQUE`) | Phase 2+ |
+| `XLOOKUP` wildcard / search-mode arguments | Phase 2+ |
 
 ## Maintenance
 

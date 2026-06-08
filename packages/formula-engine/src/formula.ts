@@ -7,11 +7,13 @@ import { a1ToCell } from './a1';
  *  - arithmetic (`+ - * / ^`, parens, unary minus) and ranges
  *  - text: string literals (`"..."`), `&` concatenation, string comparisons
  *  - comparisons (`= <> < <= > >=`) — numeric, or lexicographic for text
- *  - functions: SUM / AVERAGE / COUNT / MIN / MAX, IF (lazy branches),
+ *  - functions: SUM / AVERAGE / COUNT / MIN / MAX, IF (lazy branches), IFS,
  *    AND / OR / NOT, ABS / INT / SQRT / POWER / MOD / ROUND,
- *    COUNTIF / SUMIF / AVERAGEIF, text: CONCAT / CONCATENATE / LEN / UPPER /
- *    LOWER / TRIM / LEFT / RIGHT, and dates: DATE / DATEVALUE / YEAR / MONTH /
- *    DAY / DATEDIF (serial day-counts since 1970-01-01; TODAY/NOW need a clock),
+ *    COUNTIF(S) / SUMIF(S) / AVERAGEIF(S), text: CONCAT / CONCATENATE / TEXTJOIN /
+ *    LEN / UPPER / LOWER / TRIM / LEFT / RIGHT / MID / SUBSTITUTE / FIND, and
+ *    dates: DATE / DATEVALUE / YEAR / MONTH / DAY / DATEDIF / WEEKDAY / EDATE /
+ *    EOMONTH / TODAY / NOW (serial day-counts since 1970-01-01; TODAY/NOW read an
+ *    injected clock — NOW carries a fractional time-of-day),
  *    and lookups: VLOOKUP / HLOOKUP / XLOOKUP / INDEX / MATCH (exact by default)
  * Further breadth (dynamic arrays / spill) stays planned — see
  * docs/formula-compat.md; unknown functions return `#NAME?` (never guessed).
@@ -67,8 +69,17 @@ function ymdToSerial(year: number, month: number, day: number): number {
 }
 
 function serialToYmd(serial: number): { year: number; month: number; day: number } {
-  const d = new Date(Math.round(serial) * MS_PER_DAY);
+  // Floor so a fractional serial (e.g. NOW's time-of-day) maps to its calendar
+  // day; identical to round for the integer serials DATE/DATEVALUE produce.
+  const d = new Date(Math.floor(serial) * MS_PER_DAY);
   return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1, day: d.getUTCDate() };
+}
+
+/** Serial of the last day of the month `months` after `serial`'s month. */
+function endOfMonthSerial(serial: number, months: number): number {
+  const { year, month } = serialToYmd(serial);
+  // Day 0 of (month + months + 1) = the last day of (month + months).
+  return Math.floor(Date.UTC(year, month + months, 0) / MS_PER_DAY);
 }
 
 /** Parse an ISO `YYYY-MM-DD` string to a serial; throws #VALUE! if invalid. */
@@ -303,6 +314,71 @@ function applyFunction(name: string, values: (FormulaValue | null)[]): FormulaVa
       const n = Math.max(0, Math.trunc(toNumber(values[1] ?? 1)));
       return s.slice(s.length - n);
     }
+    case 'MID': {
+      const s = toText(values[0] ?? '');
+      const start = Math.trunc(toNumber(values[1] ?? 1)); // 1-based
+      const len = Math.max(0, Math.trunc(toNumber(values[2] ?? 0)));
+      if (start < 1) throw new Error('#VALUE!');
+      return s.slice(start - 1, start - 1 + len);
+    }
+    case 'SUBSTITUTE': {
+      const s = toText(values[0] ?? '');
+      const oldText = toText(values[1] ?? '');
+      const newText = toText(values[2] ?? '');
+      if (oldText === '') return s;
+      if (values.length > 3) {
+        // Replace only the nth (1-based) occurrence.
+        const nth = Math.trunc(toNumber(values[3] ?? 0));
+        if (nth < 1) throw new Error('#VALUE!');
+        let from = 0;
+        for (let count = 1; ; count++) {
+          const at = s.indexOf(oldText, from);
+          if (at === -1) return s;
+          if (count === nth) return s.slice(0, at) + newText + s.slice(at + oldText.length);
+          from = at + oldText.length;
+        }
+      }
+      return s.split(oldText).join(newText);
+    }
+    case 'TEXTJOIN': {
+      // TEXTJOIN(delimiter, ignore_empty, ...items) — ranges flatten into items.
+      const delim = toText(values[0] ?? '');
+      const ignoreEmpty = toNumber(values[1] ?? 0) !== 0;
+      const items = values
+        .slice(2)
+        .filter((v) => !ignoreEmpty || toText(v) !== '')
+        .map(toText);
+      return items.join(delim);
+    }
+    case 'FIND': {
+      // 1-based, case-sensitive; #VALUE! when not found.
+      const needle = toText(values[0] ?? '');
+      const haystack = toText(values[1] ?? '');
+      const start = Math.max(1, Math.trunc(toNumber(values[2] ?? 1)));
+      const at = haystack.indexOf(needle, start - 1);
+      if (at === -1) throw new Error('#VALUE!');
+      return at + 1;
+    }
+    // More dates (serial day-counts; see DATE above).
+    case 'WEEKDAY': {
+      const serial = toNumber(values[0] ?? 0);
+      const type = values.length > 1 ? Math.trunc(toNumber(values[1] ?? 1)) : 1;
+      const dow = new Date(Math.floor(serial) * MS_PER_DAY).getUTCDay(); // 0=Sun..6=Sat
+      if (type === 1) return dow + 1; // Sun=1..Sat=7
+      if (type === 2) return ((dow + 6) % 7) + 1; // Mon=1..Sun=7
+      if (type === 3) return (dow + 6) % 7; // Mon=0..Sun=6
+      throw new Error('#NUM!');
+    }
+    case 'EDATE': {
+      const { year, month, day } = serialToYmd(toNumber(values[0] ?? 0));
+      const delta = Math.trunc(toNumber(values[1] ?? 0));
+      // Clamp the day to the target month's last day (Excel: Jan-31 +1 → Feb-28).
+      const lastDay = endOfMonthSerial(toNumber(values[0] ?? 0), delta);
+      const lastDom = serialToYmd(lastDay).day;
+      return ymdToSerial(year, month + delta, Math.min(day, lastDom));
+    }
+    case 'EOMONTH':
+      return endOfMonthSerial(toNumber(values[0] ?? 0), Math.trunc(toNumber(values[1] ?? 0)));
     // Dates — serial day-counts since 1970-01-01 (no auto-coercion; DATEVALUE is explicit).
     case 'DATE':
       return ymdToSerial(toNumber(values[0] ?? 0), toNumber(values[1] ?? 0), toNumber(values[2] ?? 0));
@@ -329,6 +405,7 @@ class Parser {
     source: string,
     private readonly resolve: CellResolver,
     private readonly resolveRef: RefResolver = defaultRefResolver,
+    private readonly now: () => number = () => Date.now(),
   ) {
     this.tokens = tokenize(source);
   }
@@ -461,9 +538,14 @@ class Parser {
   private functionCall(name: string): FormulaValue {
     this.next(); // ident
     this.next(); // lparen
+    if (name === 'TODAY' || name === 'NOW') return this.dateNow(name);
     if (name === 'IF') return this.ifCall();
+    if (name === 'IFS') return this.ifsCall();
     if (name === 'COUNTIF' || name === 'SUMIF' || name === 'AVERAGEIF') {
       return this.conditionalAggregate(name);
+    }
+    if (name === 'COUNTIFS' || name === 'SUMIFS' || name === 'AVERAGEIFS') {
+      return this.conditionalAggregateMulti(name);
     }
     if (name === 'VLOOKUP') return this.vlookup();
     if (name === 'HLOOKUP') return this.hlookup();
@@ -599,6 +681,98 @@ class Parser {
       this.next();
     }
     return { op, threshold: this.expression() };
+  }
+
+  /** TODAY() / NOW() — no args; reads the injected clock (ms since epoch). */
+  private dateNow(name: string): FormulaValue {
+    this.expectRparen();
+    const ms = this.now();
+    // TODAY → whole day serial; NOW → fractional serial (carries time-of-day).
+    return name === 'TODAY' ? Math.floor(ms / MS_PER_DAY) : ms / MS_PER_DAY;
+  }
+
+  /**
+   * IFS(cond1, val1, cond2, val2, …) — returns the first matching value. Conditions
+   * are evaluated in order and **stop at the first true** (Excel short-circuit);
+   * only the chosen value is evaluated, so the others can't raise errors. No match
+   * → #N/A.
+   */
+  private ifsCall(): FormulaValue {
+    let chosen = -1;
+    for (;;) {
+      if (chosen === -1) {
+        const cond = toNumber(this.comparison());
+        this.expectComma();
+        const valueStart = this.pos;
+        this.skipArg();
+        if (cond !== 0) chosen = valueStart;
+      } else {
+        // Already matched — skip the remaining (cond, value) without evaluating.
+        this.skipArg();
+        this.expectComma();
+        this.skipArg();
+      }
+      if (this.peek()?.type === 'comma') {
+        this.next();
+        continue;
+      }
+      break;
+    }
+    if (this.peek()?.type !== 'rparen') throw new Error('#ERROR!');
+    const end = this.pos;
+    if (chosen === -1) throw new Error('#N/A');
+    this.pos = chosen;
+    const result = this.comparison();
+    this.pos = end;
+    this.next(); // rparen
+    return result;
+  }
+
+  /**
+   * SUMIFS(sum_range, crit_range1, crit1, …), COUNTIFS(crit_range1, crit1, …),
+   * AVERAGEIFS(avg_range, crit_range1, crit1, …). An index matches when **every**
+   * (range, criteria) pair holds (AND); criteria reuse `parseCriteria`.
+   */
+  private conditionalAggregateMulti(name: string): FormulaValue {
+    let valueRange: (FormulaValue | null)[] | null = null;
+    if (name === 'SUMIFS' || name === 'AVERAGEIFS') {
+      valueRange = this.rangeValues();
+      this.expectComma();
+    }
+    const pairs: { range: (FormulaValue | null)[]; op: string; threshold: FormulaValue }[] = [];
+    for (;;) {
+      const range = this.rangeValues();
+      this.expectComma();
+      const { op, threshold } = this.parseCriteria();
+      pairs.push({ range, op, threshold });
+      if (this.peek()?.type === 'comma') {
+        this.next();
+        continue;
+      }
+      break;
+    }
+    this.expectRparen();
+    if (pairs.length === 0) throw new Error('#ERROR!');
+
+    const len = pairs[0]!.range.length;
+    const matched: number[] = [];
+    for (let i = 0; i < len; i++) {
+      const ok = pairs.every(({ range, op, threshold }) => {
+        const v = range[i];
+        return v != null && compareValues(v, op, threshold);
+      });
+      if (ok) matched.push(i);
+    }
+    if (name === 'COUNTIFS') return matched.length;
+
+    const source = valueRange ?? [];
+    const picked = matched.map((i) => {
+      const s = source[i];
+      return typeof s === 'number' ? s : 0; // sum/average ignore non-numeric
+    });
+    if (name === 'SUMIFS') return picked.reduce((a, b) => a + b, 0);
+    if (picked.length === 0) throw new Error('#DIV/0!'); // AVERAGEIFS
+    return picked.reduce((a, b) => a + b, 0) / picked.length;
   }
 
   /** Read one argument as a 2D rect (rows × cols); a single cell/scalar → 1×1. */
@@ -784,6 +958,7 @@ export function evaluateFormula(
   source: string,
   resolve: CellResolver,
   resolveRef?: RefResolver,
+  now?: () => number,
 ): FormulaValue {
-  return new Parser(source, resolve, resolveRef).parse();
+  return new Parser(source, resolve, resolveRef, now).parse();
 }
