@@ -18,6 +18,7 @@ import {
 } from '@234/collab';
 import { type SheetEngine } from '@234/formula-engine';
 import { useCallback, useRef, useState } from 'react';
+import { type Chart } from '../charts/chart';
 import { type ColumnSchemaValue } from '../grid/ColumnInspector';
 import { bindSheet, type SheetBinding } from './bindSheet';
 
@@ -29,6 +30,10 @@ export interface UseSheetCollabOptions {
   columnTypes: Record<number, ColumnSchemaValue>;
   /** Apply a remote column-type change to App state. `null` ⇒ cleared. */
   onRemoteColumnType: (col: number, schema: ColumnSchemaValue | null) => void;
+  /** Current chart (read on host start to seed the shared doc). */
+  chart: Chart | null;
+  /** Apply a remote chart change to App state. `null` ⇒ chart removed. */
+  onRemoteChart: (chart: Chart | null) => void;
   transportFactory?: TransportFactory;
 }
 
@@ -47,6 +52,8 @@ export interface SheetCollab {
   defineName: (name: string, row: number, col: number) => void;
   /** Mirror a column-type change to the shared doc (no-op when not in a session). */
   setColumnType: (col: number, schema: ColumnSchemaValue | null) => void;
+  /** Mirror a chart change to the shared doc (no-op when not in a session). */
+  setChart: (chart: Chart | null) => void;
 }
 
 interface Session {
@@ -77,6 +84,10 @@ export function useSheetCollab(
   columnTypesRef.current = opts.columnTypes;
   const onColumnTypeRef = useRef(opts.onRemoteColumnType);
   onColumnTypeRef.current = opts.onRemoteColumnType;
+  const chartRef = useRef(opts.chart);
+  chartRef.current = opts.chart;
+  const onChartRef = useRef(opts.onRemoteChart);
+  onChartRef.current = opts.onRemoteChart;
   const factoryRef = useRef<TransportFactory>(opts.transportFactory ?? defaultFactory);
 
   const begin = useCallback(
@@ -85,8 +96,11 @@ export function useSheetCollab(
       const binding = bindSheet(engineRef.current, collabDoc, {
         onRemoteChange: () => onRemoteRef.current(),
         onColumnType: (col, schema) => onColumnTypeRef.current(col, schema),
+        onChart: (chart) => onChartRef.current(chart),
       });
-      if (asRole === 'host') binding.seed(columnTypesRef.current);
+      if (asRole === 'host') {
+        binding.seed({ columnTypes: columnTypesRef.current, chart: chartRef.current });
+      }
       const transport = factoryRef.current(relayUrl);
       transport.connect(collabDoc, room);
       sessionRef.current = { doc: collabDoc, binding, transport };
@@ -144,5 +158,21 @@ export function useSheetCollab(
     sessionRef.current?.binding.setColumnType(col, schema);
   }, []);
 
-  return { active: role !== 'idle', role, code, doc, start, join, leave, setCell, defineName, setColumnType };
+  const setChart = useCallback((value: Chart | null) => {
+    sessionRef.current?.binding.setChart(value);
+  }, []);
+
+  return {
+    active: role !== 'idle',
+    role,
+    code,
+    doc,
+    start,
+    join,
+    leave,
+    setCell,
+    defineName,
+    setColumnType,
+    setChart,
+  };
 }

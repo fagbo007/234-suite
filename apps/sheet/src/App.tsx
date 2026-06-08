@@ -67,6 +67,11 @@ export default function App() {
       });
       bump();
     },
+    chart,
+    onRemoteChart: (next) => {
+      setChart(next);
+      bump();
+    },
   });
   const peers = usePresence(collab.doc);
   const commitCell = useCallback(
@@ -273,6 +278,7 @@ export default function App() {
         <ChartDialog
           engine={engine}
           onApply={(next) => {
+            collab.setChart(next); // mirror to the shared doc when collaborating
             setChart(next);
             setPanel('none');
           }}

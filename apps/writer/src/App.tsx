@@ -29,6 +29,7 @@ import { StyleEditor } from './editor/StyleEditor';
 import { defaultStyleRegistry, setActiveStyleRegistry, type StyleRegistry } from './editor/styles';
 import { writerActions } from './ai/writerActions';
 import { useCollabSession, usePresence } from '@234/collab';
+import { bindStyles, type StylesBinding } from './collab/bindStyles';
 
 export default function App() {
   const palette = useCommandPalette();
@@ -46,6 +47,10 @@ export default function App() {
 
   const viewRef = useRef<EditorView | null>(null);
   viewRef.current = view;
+  const registryRef = useRef(registry);
+  registryRef.current = registry;
+  const stylesBindingRef = useRef<StylesBinding | null>(null);
+  const applyingRemoteStylesRef = useRef(false);
 
   const handleReady = useCallback((nextView: EditorView) => setView(nextView), []);
   const handleUpdate = useCallback((updated: EditorView) => {
@@ -117,6 +122,34 @@ export default function App() {
     setActiveStyleRegistry(registry);
     if (view) refreshStyledBlocks(view);
   }, [registry, view]);
+
+  // Collaboration: sync the style registry (definitions) over the shared doc.
+  // Block styleId attrs + images already sync as ProseMirror nodes; this carries
+  // the Style definitions so a peer renders styled blocks correctly. Off by
+  // default — solo editing is unchanged.
+  useEffect(() => {
+    const doc = collab.doc;
+    if (!doc) return;
+    const binding = bindStyles(doc, (remoteRegistry) => {
+      applyingRemoteStylesRef.current = true;
+      setRegistry(remoteRegistry);
+    });
+    stylesBindingRef.current = binding;
+    if (collab.role === 'host') binding.seed(registryRef.current);
+    return () => {
+      binding.destroy();
+      stylesBindingRef.current = null;
+    };
+  }, [collab.doc, collab.role]);
+
+  useEffect(() => {
+    if (!stylesBindingRef.current) return;
+    if (applyingRemoteStylesRef.current) {
+      applyingRemoteStylesRef.current = false;
+      return;
+    }
+    stylesBindingRef.current.pushStyles(registry);
+  }, [registry]);
 
   // MS Office shortcut compat (root §9): Ctrl/Cmd+F opens find. Bold/italic/undo/
   // redo are bound in the editor keymap from the same OFFICE_SHORTCUTS catalog.

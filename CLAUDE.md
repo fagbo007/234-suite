@@ -1116,6 +1116,22 @@ Format: `YYYY-MM-DD | Decision | Rationale | Alternatives considered`
              PresencePeerLike, staying decoupled from @234/collab like
              ImportReportLike). Presence colours are identity data in presence.ts
              (a .ts, not component CSS — the §12 hex check only scans .css).
+
+2026-06-06 | Collab breadth completed (backlog A6b): (1) Sheet CHART sync — bindSheet
+             gained a `chart` Y.Map (key "value" → JSON(Chart)) + setChart/onChart +
+             seed; useSheetCollab threads chart/onRemoteChart; ChartDialog onApply
+             mirrors via the binding. (2) Writer STYLE-REGISTRY sync — new
+             apps/writer/src/collab/bindStyles.ts (a `styles` Y.Map<styleId →
+             JSON(Style)>, observed not the whole doc so text edits don't churn it),
+             wired App-side like Slides' deck ([collab.doc] binding effect + host
+             seed + a guarded [registry] push effect). Block styleId attrs + images
+             already sync as ProseMirror nodes; this carries the Style definitions. |
+             A guest now sees the host's chart and renders styled blocks with the
+             right properties — collaboration breadth is complete across the suite. |
+             Alternatives: observe the whole doc for styles (rejected — every remote
+             keystroke would churn the registry; observe the styles map instead);
+             a styleOrder array for registry list order (deferred — order is editor
+             cosmetic). bindSheet 9 / bindStyles 2 tests; gates held; apps build.
 ```
 
 ---

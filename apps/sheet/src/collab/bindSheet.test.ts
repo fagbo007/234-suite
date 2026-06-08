@@ -58,14 +58,21 @@ describe('bindSheet', () => {
     const hostBinding = bindSheet(host, hostDoc);
     host.defineName('alpha', 0, 0);
     net.transport().connect(hostDoc, 'room');
-    hostBinding.seed({ 1: { type: 'number' } });
+    hostBinding.seed({
+      columnTypes: { 1: { type: 'number' } },
+      chart: { type: 'bar', range: 'A1:A2', title: 'Totals' },
+    });
 
     const guest = new SheetEngine();
     const guestDoc = new CollabDoc();
     let guestColumn: { col: number; schema: unknown } | null = null;
+    let guestChart: unknown = 'unset';
     bindSheet(guest, guestDoc, {
       onColumnType: (col, schema) => {
         guestColumn = { col, schema };
+      },
+      onChart: (chart) => {
+        guestChart = chart;
       },
     });
     net.transport().connect(guestDoc, 'room'); // initial sync delivers the seeded state
@@ -74,6 +81,29 @@ describe('bindSheet', () => {
     expect(guest.getRaw(0, 1)).toBe('2');
     expect(guest.coordOf('alpha')).toEqual({ row: 0, col: 0 }); // named ref seeded
     expect(guestColumn).toEqual({ col: 1, schema: { type: 'number' } }); // column type seeded
+    expect(guestChart).toEqual({ type: 'bar', range: 'A1:A2', title: 'Totals' }); // chart seeded
+  });
+
+  it('delivers a remote chart change via the callback', () => {
+    const net = createMemoryNetwork();
+    const e1 = new SheetEngine();
+    const e2 = new SheetEngine();
+    const d1 = new CollabDoc();
+    const d2 = new CollabDoc();
+    const b1 = bindSheet(e1, d1);
+    let received: unknown = 'unset';
+    bindSheet(e2, d2, {
+      onChart: (chart) => {
+        received = chart;
+      },
+    });
+    net.transport().connect(d1, 'r');
+    net.transport().connect(d2, 'r');
+
+    b1.setChart({ type: 'line', range: 'B1:B9', title: 'Trend' });
+    expect(received).toEqual({ type: 'line', range: 'B1:B9', title: 'Trend' });
+    b1.setChart(null);
+    expect(received).toBeNull();
   });
 
   it('propagates a named reference so a formula using it resolves on the peer', () => {

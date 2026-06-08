@@ -19,6 +19,8 @@ describe('useSheetCollab', () => {
       useSheetCollab(engine as SheetEngine, () => {}, {
         columnTypes: {},
         onRemoteColumnType: () => {},
+        chart: null,
+        onRemoteChart: () => {},
         transportFactory: () => net.transport(),
       }),
     );
@@ -41,6 +43,8 @@ describe('useSheetCollab', () => {
       useSheetCollab(engine as SheetEngine, () => {}, {
         columnTypes: {},
         onRemoteColumnType: () => {},
+        chart: null,
+        onRemoteChart: () => {},
         transportFactory: () => net.transport(),
       }),
     );
@@ -60,6 +64,8 @@ describe('useSheetCollab', () => {
       useSheetCollab(engine as SheetEngine, () => {}, {
         columnTypes: {},
         onRemoteColumnType: () => {},
+        chart: null,
+        onRemoteChart: () => {},
         transportFactory: () => net.transport(),
       }),
     );
@@ -78,6 +84,8 @@ describe('useSheetCollab', () => {
       useSheetCollab(engine as SheetEngine, () => {}, {
         columnTypes: {},
         onRemoteColumnType: () => {},
+        chart: null,
+        onRemoteChart: () => {},
         transportFactory: () => net.transport(),
       }),
     );

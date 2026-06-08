@@ -89,10 +89,9 @@ cross-peer WebRTC/relay sync is validated manually across instances.
   `useSheetCollab` owns the session (start/join/leave, WebRTC by default or a
   relay URL → WebSocket); `CollabPanel` is the docked Start/Join UI. The App
   routes all cell writes through a `commitCell` that uses the binding when a
-  session is active. `bindSheet` syncs three maps — `cells`, `names` (named refs,
-  coords never A1), and `columnTypes` — so a peer resolves named-ref formulas and
-  sees the same date/column formatting. **Chart sync still pending** (and Writer's
-  style-registry — see below).
+  session is active. `bindSheet` syncs four maps — `cells`, `names` (named refs,
+  coords never A1), `columnTypes`, and `chart` — so a peer resolves named-ref
+  formulas and sees the same date/column formatting and chart.
 - **Writer — DONE.** `apps/writer/src/collab/`: `writerCollab.ts`
   (`collabEditorPlugins` = `ySyncPlugin`/`yCursorPlugin`/`yUndoPlugin` + shared
   editing keymaps; `seedFragmentFromDoc` for the host) and the shared
@@ -102,7 +101,10 @@ cross-peer WebRTC/relay sync is validated manually across instances.
   ySyncPlugin binds the doc to a `Y.XmlFragment`. Writer + Sheet share the
   promoted **`CollabPanel`** in `@234/shared`. `y-prosemirror` + `yjs` are pinned
   to match `@234/collab` (single Yjs instance — proven by the fragment-convergence
-  test). Cursor-presence UI styling is deferred.
+  test). The **style registry** (definitions) syncs via `bindStyles` — a `styles`
+  `Y.Map<styleId → JSON(Style)>` wired with a `[registry]` push effect + a guarded
+  remote `setRegistry` (block `styleId` attrs + images already sync as doc nodes),
+  so a peer renders styled blocks correctly. Cursor-presence UI styling is deferred.
 - **Slides — DONE (object-level).** `apps/slides/src/collab/`: `bindDeck(doc,
   onRemoteChange)` maps the deck to nested Yjs — `order` (`Y.Array<slideId>`) +
   `slides` (`Y.Map<slideId → slideMap>`), each `slideMap` holding `notes`, an
@@ -128,9 +130,13 @@ remote editor carets with each peer's name + colour automatically. Per-app
 location highlights (Sheet's selected cell, Slides' active slide) are a follow-up
 (A5b) — they're browser-coupled to verify.
 
+Sheet syncs cells + named refs + column types + chart; Writer syncs the document
+(text/marks/images/styleId attrs via `ySyncPlugin`) + the style registry; Slides
+syncs the deck at object granularity. **Collaboration breadth is complete.**
+
 - Location highlights (Sheet cell / Slides slide), follow-a-peer, typing
   indicators; permissions, conflict-UX polish; field-level (within-object) merge;
-  serverless LAN (mDNS) discovery; deploying the relay as a service.
+  registry `styleOrder`; serverless LAN (mDNS) discovery; deploying the relay.
 
 > **Collaboration is now live in all three apps** (Sheet · Writer · Slides) on the
 > shared `@234/collab` core + relay. Real cross-peer sync over WebRTC/relay is the

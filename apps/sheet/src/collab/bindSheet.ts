@@ -7,27 +7,36 @@
  *   names       : Y.Map<name → "row,col">         — named references (coords, never A1; §3.4/§16)
  *   columnTypes : Y.Map<colIndex → JSON(schema)>  — explicit column types (date format, etc.)
  *
- * Cells + named refs live in the engine; column types live in App React state, so
- * remote column-type changes are delivered via the `onColumnType` callback.
- * Charts and conditional/validation rules are a follow-up.
+ * Cells + named refs live in the engine; column types + the chart live in App
+ * React state, so their remote changes are delivered via callbacks
+ * (`onColumnType`, `onChart`). Conditional/validation rules are a follow-up.
  */
 import { type CollabDoc, Y } from '@234/collab';
 import { type SheetEngine } from '@234/formula-engine';
+import { type Chart } from '../charts/chart';
 import { type ColumnSchemaValue } from '../grid/ColumnInspector';
+
+export interface SheetSeed {
+  columnTypes: Record<number, ColumnSchemaValue>;
+  chart: Chart | null;
+}
 
 export interface SheetBindingCallbacks {
   /** Remote cell or named-ref change applied to the engine — re-render/recalc. */
   onRemoteChange?: () => void;
   /** Remote column-type change (App owns the state). `null` ⇒ cleared. */
   onColumnType?: (col: number, schema: ColumnSchemaValue | null) => void;
+  /** Remote chart change (App owns the state). `null` ⇒ chart removed. */
+  onChart?: (chart: Chart | null) => void;
 }
 
 export interface SheetBinding {
   setCell(row: number, col: number, raw: string): void;
   defineName(name: string, row: number, col: number): void;
   setColumnType(col: number, schema: ColumnSchemaValue | null): void;
-  /** Host: copy the engine's cells + names and the given column types into the doc. */
-  seed(columnTypes: Record<number, ColumnSchemaValue>): void;
+  setChart(chart: Chart | null): void;
+  /** Host: copy the engine's cells + names and the App's column types + chart into the doc. */
+  seed(snapshot: SheetSeed): void;
   destroy(): void;
 }
 
@@ -47,10 +56,12 @@ export function bindSheet(
   doc: CollabDoc,
   callbacks: SheetBindingCallbacks = {},
 ): SheetBinding {
-  const { onRemoteChange = () => {}, onColumnType = () => {} } = callbacks;
+  const { onRemoteChange = () => {}, onColumnType = () => {}, onChart = () => {} } = callbacks;
   const cells = doc.map<string>('cells');
   const names = doc.map<string>('names');
   const columnTypes = doc.map<string>('columnTypes');
+  const chart = doc.map<string>('chart'); // single key "value" → JSON(Chart)
+  const CHART_KEY = 'value';
   const LOCAL = Symbol('sheet-binding-local');
 
   const onCells = (event: Y.YMapEvent<string>, txn: Y.Transaction) => {
@@ -97,9 +108,17 @@ export function bindSheet(
     });
   };
 
+  const onChartMap = (event: Y.YMapEvent<string>, txn: Y.Transaction) => {
+    if (txn.origin === LOCAL) return;
+    if (!event.keys.has(CHART_KEY)) return;
+    const raw = chart.get(CHART_KEY);
+    onChart(raw ? (JSON.parse(raw) as Chart) : null);
+  };
+
   cells.observe(onCells);
   names.observe(onNames);
   columnTypes.observe(onColumns);
+  chart.observe(onChartMap);
 
   return {
     setCell(row, col, raw) {
@@ -122,7 +141,14 @@ export function bindSheet(
       }, LOCAL);
     },
 
-    seed(columnTypesSnapshot) {
+    setChart(value) {
+      doc.doc.transact(() => {
+        if (value === null) chart.delete(CHART_KEY);
+        else chart.set(CHART_KEY, JSON.stringify(value));
+      }, LOCAL);
+    },
+
+    seed(snapshot) {
       const { rows, cols } = engine.usedRange();
       doc.doc.transact(() => {
         for (let row = 0; row < rows; row += 1) {
@@ -135,9 +161,10 @@ export function bindSheet(
         for (const [name, coord] of Object.entries(exported)) {
           names.set(name, `${coord.row},${coord.col}`);
         }
-        for (const [col, schema] of Object.entries(columnTypesSnapshot)) {
+        for (const [col, schema] of Object.entries(snapshot.columnTypes)) {
           columnTypes.set(String(col), JSON.stringify(schema));
         }
+        if (snapshot.chart) chart.set(CHART_KEY, JSON.stringify(snapshot.chart));
       }, LOCAL);
     },
 
@@ -145,6 +172,7 @@ export function bindSheet(
       cells.unobserve(onCells);
       names.unobserve(onNames);
       columnTypes.unobserve(onColumns);
+      chart.unobserve(onChartMap);
     },
   };
 }
