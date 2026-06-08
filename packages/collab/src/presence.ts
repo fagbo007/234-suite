@@ -3,9 +3,10 @@
  * colour) on the doc's awareness; `usePresence` returns the *other* peers in the
  * room. The `user` field is exactly what y-prosemirror's `yCursorPlugin` reads,
  * so Writer's remote editor carets get names + colours for free once identity is
- * published. Location highlights (Sheet cell, Slides slide) are a follow-up.
+ * published. A peer may also publish a **location** (Sheet's selected cell,
+ * Slides' active slide) so collaborators see where each teammate is (A5b).
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { type CollabDoc } from './doc';
 
 export interface PresenceUser {
@@ -13,9 +14,18 @@ export interface PresenceUser {
   color: string;
 }
 
+/** Where a peer is in the document. App-specific, JSON-serialisable. */
+export interface PresenceLocation {
+  /** Sheet: the selected cell. */
+  cell?: { row: number; col: number };
+  /** Slides: the active slide index. */
+  slide?: number;
+}
+
 export interface PresencePeer {
   clientId: number;
   user: PresenceUser;
+  location?: PresenceLocation;
 }
 
 // Distinct presence colours (identity data, not UI chrome — kept out of CSS).
@@ -41,10 +51,15 @@ export function randomUser(): PresenceUser {
 }
 
 /**
- * Publish this client's identity on the doc's awareness and observe the others.
- * Returns the remote peers (excluding self); `[]` when there is no session.
+ * Publish this client's identity (and optionally its location) on the doc's
+ * awareness and observe the others. Returns the remote peers (excluding self);
+ * `[]` when there is no session.
  */
-export function usePresence(doc: CollabDoc | null, selfUser?: PresenceUser): PresencePeer[] {
+export function usePresence(
+  doc: CollabDoc | null,
+  selfUser?: PresenceUser,
+  location?: PresenceLocation,
+): PresencePeer[] {
   const [self] = useState<PresenceUser>(() => selfUser ?? randomUser());
   const [peers, setPeers] = useState<PresencePeer[]>([]);
 
@@ -61,8 +76,11 @@ export function usePresence(doc: CollabDoc | null, selfUser?: PresenceUser): Pre
       const list: PresencePeer[] = [];
       awareness.getStates().forEach((state, clientId) => {
         if (clientId === localId) return;
-        const user = (state as { user?: PresenceUser }).user;
-        if (user) list.push({ clientId, user });
+        const { user, location: loc } = state as {
+          user?: PresenceUser;
+          location?: PresenceLocation;
+        };
+        if (user) list.push({ clientId, user, location: loc });
       });
       setPeers(list);
     };
@@ -75,6 +93,17 @@ export function usePresence(doc: CollabDoc | null, selfUser?: PresenceUser): Pre
       setPeers([]);
     };
   }, [doc, self]);
+
+  // Publish this client's location whenever it changes (keyed on a stable JSON
+  // key so it fires only on a real change, not every render). Read the latest
+  // via a ref so the dep array stays honest without churn.
+  const locationRef = useRef(location);
+  locationRef.current = location;
+  const locationKey = location ? JSON.stringify(location) : '';
+  useEffect(() => {
+    if (!doc) return;
+    doc.awareness.setLocalStateField('location', locationRef.current ?? null);
+  }, [doc, locationKey]);
 
   return peers;
 }

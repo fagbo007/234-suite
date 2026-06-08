@@ -58,7 +58,7 @@ export default function App() {
   const [importReport, setImportReport] = useState<ImportReport | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const collab = useCollabSession();
-  const peers = usePresence(collab.doc);
+  const peers = usePresence(collab.doc, undefined, { slide: activeIndex });
   const [collabOpen, setCollabOpen] = useState(false);
   const bindingRef = useRef<DeckBinding | null>(null);
   const applyingRemoteRef = useRef(false);
@@ -290,6 +290,7 @@ export default function App() {
           onAdd={handleAdd}
           onDelete={handleDelete}
           onMove={handleMove}
+          peers={peers}
         />
         <div className={styles.editor}>
           <SlideCanvas slide={activeSlide} />

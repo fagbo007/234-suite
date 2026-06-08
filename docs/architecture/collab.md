@@ -121,22 +121,27 @@ session hook (start/join/leave, exposes the live `CollabDoc`; WebRTC default,
 relay URL → WebSocket). Sheet keeps its own `useSheetCollab` because it also
 routes local cell writes through the binding (`setCell`).
 
-**Presence (identity + roster).** `usePresence(doc, self?)` (`@234/collab`)
-publishes a `{ name, color }` identity on the doc's awareness and returns the
-other peers; all three apps feed it into the shared `CollabPanel`, which shows a
-collaborator roster (coloured dot + name) while a session is active. Because the
-identity lives in the awareness `user` field, Writer's `yCursorPlugin` renders
-remote editor carets with each peer's name + colour automatically. Per-app
-location highlights (Sheet's selected cell, Slides' active slide) are a follow-up
-(A5b) — they're browser-coupled to verify.
+**Presence (identity + roster + location).** `usePresence(doc, self?, location?)`
+(`@234/collab`) publishes a `{ name, color }` identity on the doc's awareness and
+returns the other peers; all three apps feed it into the shared `CollabPanel`,
+which shows a collaborator roster (coloured dot + name) while a session is active.
+Because the identity lives in the awareness `user` field, Writer's `yCursorPlugin`
+renders remote editor carets with each peer's name + colour automatically. A peer
+may also publish a **location** (a separate awareness field, keyed so it only
+republishes on a real change): **Sheet** passes its selected `{ cell }` and the
+`Grid` rings a collaborator's cell with the peer colour + a name tag; **Slides**
+passes its active `{ slide }` index and the `SlidePanel` badges that slide with
+coloured peer dots. Peer colours are dynamic identity data rendered via inline
+`style` (not component-CSS hex). Convergence is proven deterministically (the
+in-memory network relays awareness); the live cross-peer visual is manual.
 
 Sheet syncs cells + named refs + column types + chart; Writer syncs the document
 (text/marks/images/styleId attrs via `ySyncPlugin`) + the style registry; Slides
 syncs the deck at object granularity. **Collaboration breadth is complete.**
 
-- Location highlights (Sheet cell / Slides slide), follow-a-peer, typing
-  indicators; permissions, conflict-UX polish; field-level (within-object) merge;
-  registry `styleOrder`; serverless LAN (mDNS) discovery; deploying the relay.
+- Follow-a-peer / viewport-follow, typing indicators; permissions, conflict-UX
+  polish; field-level (within-object) merge; registry `styleOrder`; serverless LAN
+  (mDNS) discovery; deploying the relay.
 
 > **Collaboration is now live in all three apps** (Sheet · Writer · Slides) on the
 > shared `@234/collab` core + relay. Real cross-peer sync over WebRTC/relay is the

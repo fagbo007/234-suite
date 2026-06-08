@@ -73,7 +73,7 @@ export default function App() {
       bump();
     },
   });
-  const peers = usePresence(collab.doc);
+  const peers = usePresence(collab.doc, undefined, { cell: active });
   const commitCell = useCallback(
     (row: number, col: number, raw: string) => {
       collab.setCell(row, col, raw);
@@ -314,6 +314,7 @@ export default function App() {
             columnTypes={columnTypes}
             conditionalRule={conditionalRule}
             validationRule={validationRule}
+            peers={peers}
           />
         </div>
         <AiSidebar open={ai.isOpen} onClose={ai.close} app="sheet">

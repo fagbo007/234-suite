@@ -1132,6 +1132,28 @@ Format: `YYYY-MM-DD | Decision | Rationale | Alternatives considered`
              keystroke would churn the registry; observe the styles map instead);
              a styleOrder array for registry list order (deferred — order is editor
              cosmetic). bindSheet 9 / bindStyles 2 tests; gates held; apps build.
+
+2026-06-08 | Presence location highlights (backlog A5b — the last collab follow-up):
+             `usePresence(doc, self?, location?)` now also publishes a per-peer
+             location on the awareness (a `PresenceLocation = { cell?; slide? }`
+             field, published from a second effect keyed on a JSON key so it fires
+             only on a real change). Sheet passes `{ cell: active }` → `Grid` rings a
+             collaborator's selected cell (inset box-shadow in the peer colour) + a
+             name tag; Slides passes `{ slide: activeIndex }` → `SlidePanel` badges
+             that slide with coloured peer dots. Peer colours are dynamic identity
+             data via inline `style` (never component-CSS hex). Adding `Grid.test.tsx`
+             also cleared the standing §12 "Grid.tsx: no sibling test" warning
+             (`pnpm checks` → 0/0). |
+             Completes presence (identity + roster + location) so collaborators see
+             where each teammate is working; the data layer converges
+             deterministically via the in-memory network. |
+             Alternatives: a generic `unknown` location (rejected — a typed
+             cell/slide shape is clearer and serialises cleanly); render highlights
+             from a non-awareness side channel (rejected — awareness already carries
+             presence and is relayed by every transport). presence 3 / Grid 2 /
+             SlidePanel +1 tests; 60fps + 100-slide gates held; all three apps build.
+             The live two-peer visual is a manual step. Remaining collab follow-up:
+             registry `styleOrder`; follow-a-peer; field-level merge.
 ```
 
 ---

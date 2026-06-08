@@ -80,3 +80,23 @@
   outline: 2px solid var(--color-danger);
   outline-offset: -2px;
 }
+
+/* A collaborator's selected cell. The 2px ring colour is the peer's identity
+   colour (dynamic data → inline style); this class only positions the tag. */
+.peer {
+  position: relative;
+}
+
+.peerTag {
+  position: absolute;
+  top: -1.1rem;
+  left: -1px;
+  z-index: 2;
+  padding: 0 var(--space-1);
+  font-size: var(--font-size-meta);
+  line-height: 1.1rem;
+  color: var(--color-bg-base);
+  border-radius: var(--radius-interactive);
+  white-space: nowrap;
+  pointer-events: none;
+}

@@ -24,4 +24,10 @@ export {
   type CollabRole,
   type TransportFactory,
 } from './useCollabSession';
-export { usePresence, randomUser, type PresenceUser, type PresencePeer } from './presence';
+export {
+  usePresence,
+  randomUser,
+  type PresenceUser,
+  type PresencePeer,
+  type PresenceLocation,
+} from './presence';

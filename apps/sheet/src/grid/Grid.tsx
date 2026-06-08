@@ -1,4 +1,5 @@
 import { colToLabel, type SheetEngine } from '@234/formula-engine';
+import { type PresencePeer } from '@234/collab';
 import { useMemo, useState } from 'react';
 import { displayDate, type DateFormat } from '../dates';
 import { type ColumnType } from '../fwsh';
@@ -24,6 +25,8 @@ export interface GridProps {
   conditionalRule?: string | null;
   /** Formula predicate; flag cells where it does NOT match. */
   validationRule?: string | null;
+  /** Collaborators present in the session; their selected cells are highlighted. */
+  peers?: PresencePeer[];
 }
 
 export function Grid({
@@ -34,8 +37,22 @@ export function Grid({
   columnTypes = {},
   conditionalRule = null,
   validationRule = null,
+  peers = [],
 }: GridProps) {
   const [scrollTop, setScrollTop] = useState(0);
+
+  // A collaborator's selected cell, keyed "row,col" (peers is tiny). First peer
+  // on a cell wins the tag; concurrent peers on the same cell are rare.
+  const peerByCell = useMemo(() => {
+    const map = new Map<string, PresencePeer>();
+    for (const peer of peers) {
+      const cell = peer.location?.cell;
+      if (cell && !map.has(`${cell.row},${cell.col}`)) {
+        map.set(`${cell.row},${cell.col}`, peer);
+      }
+    }
+    return map;
+  }, [peers]);
 
   // Date columns display in their locked format; the stored raw is never mutated.
   const displayValue = (col: number, value: string): string => {
@@ -109,7 +126,13 @@ export function Grid({
             </div>
             {vm.cells.map((cell) => {
               const isActive = active.row === vm.row && active.col === cell.col;
-              const classes = [styles.cell, isActive ? styles.active : '', ...ruleClasses(cell.value)]
+              const peer = peerByCell.get(`${vm.row},${cell.col}`);
+              const classes = [
+                styles.cell,
+                isActive ? styles.active : '',
+                peer ? styles.peer : '',
+                ...ruleClasses(cell.value),
+              ]
                 .filter(Boolean)
                 .join(' ');
               return (
@@ -119,9 +142,18 @@ export function Grid({
                   aria-label={`${columns[cell.col] ?? ''}${vm.row + 1}`}
                   aria-selected={isActive}
                   className={classes}
-                  style={{ width: dims.colWidth }}
+                  style={
+                    peer
+                      ? { width: dims.colWidth, boxShadow: `inset 0 0 0 2px ${peer.user.color}` }
+                      : { width: dims.colWidth }
+                  }
                   onMouseDown={() => onSelect(vm.row, cell.col)}
                 >
+                  {peer ? (
+                    <span className={styles.peerTag} style={{ background: peer.user.color }} aria-hidden>
+                      {peer.user.name}
+                    </span>
+                  ) : null}
                   {displayValue(cell.col, cell.value)}
                 </div>
               );

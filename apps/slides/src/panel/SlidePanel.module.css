@@ -64,6 +64,20 @@
   gap: var(--space-1);
 }
 
+/* Collaborators viewing this slide. Each dot's colour is the peer's identity
+   colour (dynamic data → inline style); this class only positions the dots. */
+.peerDots {
+  display: flex;
+  gap: var(--space-1);
+  min-height: 8px;
+}
+
+.peerDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
 .iconButton {
   display: inline-flex;
   align-items: center;
