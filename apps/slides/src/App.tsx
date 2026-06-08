@@ -12,7 +12,7 @@ import {
 import { type ChangeEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { slidesActions } from './ai/slidesActions';
 import { AnimationPanel } from './anim/AnimationPanel';
-import { useCollabSession } from '@234/collab';
+import { useCollabSession, usePresence } from '@234/collab';
 import { bindDeck, type DeckBinding } from './collab/bindDeck';
 import { modelToPptxDeck, pptxDeckToModel } from './compat/pptxMap';
 import styles from './App.module.css';
@@ -58,6 +58,7 @@ export default function App() {
   const [importReport, setImportReport] = useState<ImportReport | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const collab = useCollabSession();
+  const peers = usePresence(collab.doc);
   const [collabOpen, setCollabOpen] = useState(false);
   const bindingRef = useRef<DeckBinding | null>(null);
   const applyingRemoteRef = useRef(false);
@@ -278,6 +279,7 @@ export default function App() {
           onStart={collab.start}
           onJoin={collab.join}
           onLeave={collab.leave}
+          peers={peers}
         />
       ) : null}
       <div className={styles.workspace}>

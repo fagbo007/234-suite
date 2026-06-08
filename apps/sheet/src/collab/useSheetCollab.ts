@@ -36,6 +36,8 @@ export interface SheetCollab {
   active: boolean;
   role: CollabRole;
   code: string | null;
+  /** The live shared doc while in a session (for presence), else null. */
+  doc: CollabDoc | null;
   start: () => string;
   join: (code: string, relayUrl?: string) => string | null;
   leave: () => void;
@@ -63,6 +65,7 @@ export function useSheetCollab(
 ): SheetCollab {
   const [role, setRole] = useState<CollabRole>('idle');
   const [code, setCode] = useState<string | null>(null);
+  const [doc, setDoc] = useState<CollabDoc | null>(null);
   const sessionRef = useRef<Session | null>(null);
 
   // Refs keep the callbacks stable while always seeing the latest values.
@@ -78,17 +81,18 @@ export function useSheetCollab(
 
   const begin = useCallback(
     (room: string, sessionCode: string, asRole: 'host' | 'guest', relayUrl?: string) => {
-      const doc = new CollabDoc();
-      const binding = bindSheet(engineRef.current, doc, {
+      const collabDoc = new CollabDoc();
+      const binding = bindSheet(engineRef.current, collabDoc, {
         onRemoteChange: () => onRemoteRef.current(),
         onColumnType: (col, schema) => onColumnTypeRef.current(col, schema),
       });
       if (asRole === 'host') binding.seed(columnTypesRef.current);
       const transport = factoryRef.current(relayUrl);
-      transport.connect(doc, room);
-      sessionRef.current = { doc, binding, transport };
+      transport.connect(collabDoc, room);
+      sessionRef.current = { doc: collabDoc, binding, transport };
       setRole(asRole);
       setCode(sessionCode);
+      setDoc(collabDoc);
     },
     [],
   );
@@ -120,6 +124,7 @@ export function useSheetCollab(
     sessionRef.current = null;
     setRole('idle');
     setCode(null);
+    setDoc(null);
     onRemoteRef.current();
   }, []);
 
@@ -139,5 +144,5 @@ export function useSheetCollab(
     sessionRef.current?.binding.setColumnType(col, schema);
   }, []);
 
-  return { active: role !== 'idle', role, code, start, join, leave, setCell, defineName, setColumnType };
+  return { active: role !== 'idle', role, code, doc, start, join, leave, setCell, defineName, setColumnType };
 }

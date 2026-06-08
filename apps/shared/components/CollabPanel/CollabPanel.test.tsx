@@ -47,4 +47,23 @@ describe('CollabPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Leave session' }));
     expect(onLeave).toHaveBeenCalledOnce();
   });
+
+  it('renders a roster of collaborators when active', () => {
+    render(
+      <CollabPanel
+        active
+        code="234-K7Q2-9FMR"
+        onStart={vi.fn()}
+        onJoin={vi.fn()}
+        onLeave={vi.fn()}
+        peers={[
+          { clientId: 1, user: { name: 'Ada', color: '#1971c2' } },
+          { clientId: 2, user: { name: 'Linus', color: '#2f9e44' } },
+        ]}
+      />,
+    );
+    const roster = screen.getByLabelText('Collaborators');
+    expect(roster.textContent).toContain('Ada');
+    expect(roster.textContent).toContain('Linus');
+  });
 });

@@ -28,7 +28,7 @@ import { ImagePanel } from './editor/ImagePanel';
 import { StyleEditor } from './editor/StyleEditor';
 import { defaultStyleRegistry, setActiveStyleRegistry, type StyleRegistry } from './editor/styles';
 import { writerActions } from './ai/writerActions';
-import { useCollabSession } from '@234/collab';
+import { useCollabSession, usePresence } from '@234/collab';
 
 export default function App() {
   const palette = useCommandPalette();
@@ -41,6 +41,7 @@ export default function App() {
   const ai = useAiSidebar('writer');
   const { settings: aiSettings, setSettings: setAiSettings, provider: aiProvider } = useAiSettings();
   const collab = useCollabSession();
+  const peers = usePresence(collab.doc);
   const [collabOpen, setCollabOpen] = useState(false);
 
   const viewRef = useRef<EditorView | null>(null);
@@ -187,6 +188,7 @@ export default function App() {
           onStart={collab.start}
           onJoin={collab.join}
           onLeave={collab.leave}
+          peers={peers}
         />
       ) : null}
 

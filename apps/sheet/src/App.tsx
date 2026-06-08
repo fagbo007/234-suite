@@ -20,6 +20,7 @@ import { ColumnInspector, type ColumnSchemaValue } from './grid/ColumnInspector'
 import { FormulaBar } from './grid/FormulaBar';
 import { Grid, type ColumnTypeMap } from './grid/Grid';
 import { NameBox } from './grid/NameBox';
+import { usePresence } from '@234/collab';
 import { sheetActions } from './ai/sheetActions';
 import { useSheetCollab } from './collab/useSheetCollab';
 import { LinkAuditor } from './inspector/LinkAuditor';
@@ -67,6 +68,7 @@ export default function App() {
       bump();
     },
   });
+  const peers = usePresence(collab.doc);
   const commitCell = useCallback(
     (row: number, col: number, raw: string) => {
       collab.setCell(row, col, raw);
@@ -260,6 +262,7 @@ export default function App() {
           onStart={collab.start}
           onJoin={collab.join}
           onLeave={collab.leave}
+          peers={peers}
         />
       ) : null}
       {panel === 'column' ? (

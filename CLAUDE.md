@@ -1099,6 +1099,23 @@ Format: `YYYY-MM-DD | Decision | Rationale | Alternatives considered`
              binding already exists; threading columnTypes via a ref is contained).
              DEFERRED (A6b): chart sync + Writer style-registry sync (Writer images
              already sync as ProseMirror doc nodes).
+
+2026-06-06 | Collaboration presence (backlog A5): usePresence(doc, self?) in
+             @234/collab publishes a {name,color} identity on the doc's awareness
+             and returns the other peers; the shared CollabPanel gained an optional
+             peers prop and shows a collaborator roster (coloured dot + name) while
+             active. All three apps feed usePresence(collab.doc) into CollabPanel
+             (Sheet's useSheetCollab gained a `doc` field for this). Because the
+             identity is the awareness `user` field, Writer's existing yCursorPlugin
+             now renders remote carets with each peer's name + colour for free. |
+             Delivers visible presence with a verifiable core (peer convergence +
+             roster) while the actual cursor rendering stays browser/manual. |
+             Alternatives: per-app location highlights now (deferred to A5b —
+             Sheet cell / Slides slide are browser-coupled to verify); host the
+             roster data in @234/shared (rejected — CollabPanel takes a structural
+             PresencePeerLike, staying decoupled from @234/collab like
+             ImportReportLike). Presence colours are identity data in presence.ts
+             (a .ts, not component CSS — the §12 hex check only scans .css).
 ```
 
 ---

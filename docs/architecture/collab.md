@@ -119,8 +119,18 @@ session hook (start/join/leave, exposes the live `CollabDoc`; WebRTC default,
 relay URL → WebSocket). Sheet keeps its own `useSheetCollab` because it also
 routes local cell writes through the binding (`setCell`).
 
-- Presence cursors, permissions, conflict-UX polish; field-level (within-object)
-  merge; serverless LAN (mDNS) discovery; deploying the relay as a service.
+**Presence (identity + roster).** `usePresence(doc, self?)` (`@234/collab`)
+publishes a `{ name, color }` identity on the doc's awareness and returns the
+other peers; all three apps feed it into the shared `CollabPanel`, which shows a
+collaborator roster (coloured dot + name) while a session is active. Because the
+identity lives in the awareness `user` field, Writer's `yCursorPlugin` renders
+remote editor carets with each peer's name + colour automatically. Per-app
+location highlights (Sheet's selected cell, Slides' active slide) are a follow-up
+(A5b) — they're browser-coupled to verify.
+
+- Location highlights (Sheet cell / Slides slide), follow-a-peer, typing
+  indicators; permissions, conflict-UX polish; field-level (within-object) merge;
+  serverless LAN (mDNS) discovery; deploying the relay as a service.
 
 > **Collaboration is now live in all three apps** (Sheet · Writer · Slides) on the
 > shared `@234/collab` core + relay. Real cross-peer sync over WebRTC/relay is the
