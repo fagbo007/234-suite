@@ -7,6 +7,7 @@ import {
   useAiSidebar,
 } from '@234/ai-sidebar';
 import { exportXlsx, importXlsx, type ImportReport } from '@234/compat';
+import { pickOpenPath, pickSavePath, readTextFile, writeTextFile } from '@234/desktop';
 import { loadPlugins, sampleProviderPlugin, type Plugin } from '@234/plugin-host';
 import { SheetEngine } from '@234/formula-engine';
 import {
@@ -23,7 +24,8 @@ import styles from './App.module.css';
 import { type Chart, chartValues } from './charts/chart';
 import { ChartDialog } from './charts/ChartDialog';
 import { ChartView } from './charts/ChartView';
-import { applyCells } from './fwsh';
+import { applyCells, applyNamedRanges, type FwshMeta, parseFwshCsv, serializeFwsh } from './fwsh';
+import { type DateFormat } from './dates';
 import { ColumnInspector, type ColumnSchemaValue } from './grid/ColumnInspector';
 import { FormulaBar } from './grid/FormulaBar';
 import { Grid, type ColumnTypeMap } from './grid/Grid';
@@ -38,6 +40,8 @@ type Panel = 'none' | 'column' | 'links' | 'chart' | 'conditional' | 'validation
 
 // In-tree, opt-in plugins loaded through the plugin host (root §9; plugin-api.md).
 const BUILTIN_PLUGINS: Plugin[] = [sampleProviderPlugin];
+
+const FWSH_FILTER = { name: '234 Sheet', extensions: ['fwsh'] };
 
 export default function App() {
   const palette = useCommandPalette();
@@ -95,6 +99,48 @@ export default function App() {
 
   const activeRef = useRef(active);
   activeRef.current = active;
+  const columnTypesRef = useRef(columnTypes);
+  columnTypesRef.current = columnTypes;
+
+  // Save the sheet to a native .fwsh (CSV) + a sidecar .fwsh.meta JSON (§7).
+  const saveFwsh = useCallback(() => {
+    const columns = Object.entries(columnTypesRef.current).map(([index, schema]) => ({
+      index: Number(index),
+      type: schema.type,
+      ...(schema.dateFormat ? { dateFormat: schema.dateFormat } : {}),
+    }));
+    const { csv, meta } = serializeFwsh(engine, { columns, namedRanges: {} });
+    void pickSavePath('sheet.fwsh', FWSH_FILTER).then((path) => {
+      if (!path) return;
+      void writeTextFile(path, csv);
+      void writeTextFile(`${path}.meta`, JSON.stringify(meta, null, 2));
+    });
+  }, [engine]);
+
+  // Open a native .fwsh → load cells + (best-effort) the sidecar meta.
+  const openFwsh = useCallback(() => {
+    void pickOpenPath(FWSH_FILTER).then(async (path) => {
+      if (!path) return;
+      const csv = await readTextFile(path);
+      engine.destroy();
+      applyCells(engine, parseFwshCsv(csv));
+      try {
+        const meta = JSON.parse(await readTextFile(`${path}.meta`)) as FwshMeta;
+        applyNamedRanges(engine, meta.namedRanges ?? {});
+        const nextTypes: ColumnTypeMap = {};
+        for (const column of meta.columns ?? []) {
+          nextTypes[column.index] = {
+            type: column.type,
+            ...(column.dateFormat ? { dateFormat: column.dateFormat as DateFormat } : {}),
+          };
+        }
+        setColumnTypes(nextTypes);
+      } catch {
+        /* no sidecar (or invalid) — cells still loaded */
+      }
+      bump();
+    });
+  }, [engine, bump]);
 
   // Load in-tree plugins through the host (commands + AI providers).
   useEffect(
@@ -209,6 +255,8 @@ export default function App() {
         group: 'Collaborate',
         run: () => setPanel('collab'),
       }),
+      registerCommand({ id: 'sheet.open', title: 'Open', group: 'File', run: openFwsh }),
+      registerCommand({ id: 'sheet.save', title: 'Save', group: 'File', run: saveFwsh }),
       registerCommand({ id: 'sheet.open-xlsx', title: 'Open .xlsx', group: 'File', run: openXlsx }),
       registerCommand({ id: 'sheet.export-xlsx', title: 'Export .xlsx', group: 'File', run: handleExportXlsx }),
       registerCommand({
@@ -233,13 +281,19 @@ export default function App() {
     return () => {
       for (const remove of unregister) remove();
     };
-  }, [engine, bump, ai, openXlsx, handleExportXlsx]);
+  }, [engine, bump, ai, openXlsx, handleExportXlsx, openFwsh, saveFwsh]);
 
   return (
     <div className={styles.app}>
       <header className={styles.header}>
         <h1 className={styles.title}>234 Sheet</h1>
         <div className={styles.actions}>
+          <Button variant="ghost" onClick={openFwsh}>
+            Open
+          </Button>
+          <Button variant="ghost" onClick={saveFwsh}>
+            Save
+          </Button>
           <Button variant="ghost" onClick={openXlsx}>
             Open .xlsx
           </Button>

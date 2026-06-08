@@ -15,6 +15,7 @@
     "@234/ai-sidebar": "workspace:*",
     "@234/collab": "workspace:*",
     "@234/compat": "workspace:*",
+    "@234/desktop": "workspace:*",
     "@234/formula-engine": "workspace:*",
     "@234/plugin-host": "workspace:*",
     "@234/shared": "workspace:*",

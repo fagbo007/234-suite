@@ -1216,6 +1216,32 @@ Format: `YYYY-MM-DD | Decision | Rationale | Alternatives considered`
              extensionless-relative-import failure on `index.js`). DEFERRED: full
              per-symbol TypeScript API docs (TypeDoc), search, versioning, a hosted
              deploy/CI publish step. docs-site 13 tests; full suite green; checks 0/0.
+
+2026-06-08 | Native file I/O (backlog B — realises §3.5 "file I/O belongs in Rust"
+             for the suite's own .fwtr/.fwsh/.fwsl): new shared Rust crate
+             `packages/file-io` (`app234_files`, mirroring `ai-backend`) — OS
+             open/save dialogs via `rfd` (MIT — what tauri-plugin-dialog wraps) +
+             text read/write via `std::fs`, as plain functions; each app's
+             `src-tauri` wraps them in `#[tauri::command]`s (`fs_pick_open`/
+             `fs_pick_save`/`fs_read_text`/`fs_write_text`) + `generate_handler!`.
+             New JS bridge `@234/desktop` (the twin of `keychain.ts`): `isDesktop()`
+             guard, granular pick/read/write + convenience `openTextFile`/
+             `saveTextFile`, with a browser fallback (`<input type=file>`/`Blob`) so
+             the same File menu works in the web dev build. All three apps gain
+             Open/Save (header + palette) wired to their serializers — Sheet writes
+             the CSV + the `.fwsh.meta` sidecar (two writes), reads both on open. |
+             Owner chose a custom crate over the official Tauri dialog/fs plugins:
+             consistent with the established custom-command pattern, the most
+             locked-down surface (only the picked path), and a JS bridge unit-tested
+             against mocked `invoke`. |
+             Alternatives: tauri-plugin-dialog + -fs (rejected — adds plugin deps +
+             FS-capability ACL scoping; diverges from the custom-command precedent).
+             Verified: `cargo test` (read/write round-trip + missing-file error),
+             `cargo check` on the Writer backend (crate + 4 commands link), desktop
+             7 unit tests (mocked invoke + web-fallback), Sheet +1 app test; full
+             suite green; checks 0/0; suite stays MIT (rfd is MIT). The real OS
+             dialog + on-disk open/save is a manual desktop step. DEFERRED: recent
+             files, auto-save, file-association/"open with", drag-and-drop open.
 ```
 
 ---

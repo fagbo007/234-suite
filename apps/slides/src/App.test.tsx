@@ -13,6 +13,9 @@ describe('234 Slides app', () => {
     expect(screen.getByLabelText('Add slide')).toBeTruthy();
     expect(screen.getByLabelText('Slide canvas')).toBeTruthy();
     expect(screen.getByRole('button', { name: /command palette/i })).toBeTruthy();
+    // Native .fwsl open/save (distinct from the .pptx compat buttons).
+    expect(screen.getByRole('button', { name: 'Open' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Save' })).toBeTruthy();
   });
 
   it('exposes the "Tidy slide" auto-layout command in the palette', () => {

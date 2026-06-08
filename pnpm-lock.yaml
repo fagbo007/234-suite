@@ -127,6 +127,9 @@ importers:
       '@234/compat':
         specifier: workspace:*
         version: link:../../packages/compat
+      '@234/desktop':
+        specifier: workspace:*
+        version: link:../../packages/desktop
       '@234/formula-engine':
         specifier: workspace:*
         version: link:../../packages/formula-engine
@@ -182,6 +185,9 @@ importers:
       '@234/compat':
         specifier: workspace:*
         version: link:../../packages/compat
+      '@234/desktop':
+        specifier: workspace:*
+        version: link:../../packages/desktop
       '@234/plugin-host':
         specifier: workspace:*
         version: link:../../packages/plugin-host
@@ -243,6 +249,9 @@ importers:
       '@234/compat':
         specifier: workspace:*
         version: link:../../packages/compat
+      '@234/desktop':
+        specifier: workspace:*
+        version: link:../../packages/desktop
       '@234/plugin-host':
         specifier: workspace:*
         version: link:../../packages/plugin-host
@@ -411,6 +420,25 @@ importers:
       fflate:
         specifier: ^0.8.2
         version: 0.8.3
+    devDependencies:
+      jsdom:
+        specifier: ^25.0.1
+        version: 25.0.1(canvas@2.11.2)
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vite:
+        specifier: ^5.4.11
+        version: 5.4.21(@types/node@22.19.19)
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.19.19)(jsdom@25.0.1(canvas@2.11.2))
+
+  packages/desktop:
+    dependencies:
+      '@tauri-apps/api':
+        specifier: ^2.1.0
+        version: 2.11.0
     devDependencies:
       jsdom:
         specifier: ^25.0.1

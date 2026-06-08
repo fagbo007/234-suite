@@ -31,6 +31,28 @@ fn ai_cloud_complete(
     app234_ai::cloud_complete(&provider, &model, system.as_deref(), &prompt)
 }
 
+// Native file I/O (root §3.5) — open/save the suite's own formats via the OS
+// dialog; read/write the picked path. Wraps the shared app234_files crate.
+#[tauri::command]
+fn fs_pick_open(filter_name: String, extensions: Vec<String>) -> Option<String> {
+    app234_files::pick_open(&filter_name, &extensions)
+}
+
+#[tauri::command]
+fn fs_pick_save(default_name: String, filter_name: String, extensions: Vec<String>) -> Option<String> {
+    app234_files::pick_save(&default_name, &filter_name, &extensions)
+}
+
+#[tauri::command]
+fn fs_read_text(path: String) -> Result<String, String> {
+    app234_files::read_text(&path)
+}
+
+#[tauri::command]
+fn fs_write_text(path: String, contents: String) -> Result<(), String> {
+    app234_files::write_text(&path, &contents)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -38,7 +60,11 @@ pub fn run() {
             ai_set_key,
             ai_delete_key,
             ai_has_key,
-            ai_cloud_complete
+            ai_cloud_complete,
+            fs_pick_open,
+            fs_pick_save,
+            fs_read_text,
+            fs_write_text
         ])
         .run(tauri::generate_context!())
         .expect("error while running 234 Sheet");

@@ -1,0 +1,13 @@
+[package]
+name = "app234-files"
+version = "0.0.0"
+description = "234 suite native file I/O — OS open/save dialogs + text read/write"
+edition = "2021"
+rust-version = "1.77"
+
+[lib]
+name = "app234_files"
+
+[dependencies]
+# Native OS file dialogs (open/save). MIT — the same crate tauri-plugin-dialog wraps.
+rfd = "0.15"

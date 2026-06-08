@@ -12,6 +12,9 @@ describe('234 Writer app', () => {
     expect(screen.getByRole('button', { name: 'Insert image' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Open .docx' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Export .docx' })).toBeTruthy();
+    // Native .fwtr open/save (distinct from the .docx compat buttons).
+    expect(screen.getByRole('button', { name: 'Open' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Save' })).toBeTruthy();
     expect(screen.getByRole('region', { name: 'Styles' })).toBeTruthy();
   });
 

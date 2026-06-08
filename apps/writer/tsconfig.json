@@ -10,6 +10,7 @@
     { "path": "../../packages/ai-sidebar" },
     { "path": "../../packages/compat" },
     { "path": "../../packages/collab" },
-    { "path": "../../packages/plugin-host" }
+    { "path": "../../packages/plugin-host" },
+    { "path": "../../packages/desktop" }
   ]
 }

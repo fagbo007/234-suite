@@ -168,6 +168,36 @@ those OSes (not built on this Windows host).
 
 ---
 
+## 6a. Native file I/O (built — 2026-06-08)
+
+Realises §3.5 ("file I/O belongs in Rust") for the suite's **own** formats
+(`.fwtr` / `.fwsh` / `.fwsl`) — previously only the MS-Office compat round-trip
+existed (browser file-input + download).
+
+- **`packages/file-io`** (`app234_files`) — a shared Rust crate (mirroring
+  `ai-backend`): OS open/save dialogs via **`rfd`** (MIT) + text read/write via
+  `std::fs`, exposed as **plain functions**. Each app's `src-tauri` wraps them in
+  thin `#[tauri::command]`s (`fs_pick_open` / `fs_pick_save` / `fs_read_text` /
+  `fs_write_text`) and registers them in `generate_handler!`. The surface is
+  path-based and narrow — only the user-picked path is read/written; no broad
+  filesystem capability is exposed.
+- **`@234/desktop`** (`packages/desktop`) — the JS twin (like `keychain.ts` ↔
+  `ai-backend`): `isDesktop()` guard, `pickOpenPath`/`pickSavePath`/`readTextFile`/
+  `writeTextFile`, and convenience `openTextFile`/`saveTextFile`. **Web fallback:**
+  off-desktop it uses a hidden `<input type=file>` / `Blob` download, so the same
+  File menu works in the browser dev build.
+- **App wiring** — each app gains **Open** / **Save** (File menu + palette) wired
+  to its serializer: Writer `serializeFwtr`/`parseFwtr`; Sheet `serializeFwsh` +
+  the `.fwsh.meta` sidecar (`writeTextFile(path)` + `writeTextFile(path+'.meta')`),
+  `parseFwshCsv`/`applyCells`/`applyNamedRanges` on open; Slides
+  `serializeFwsl`/`parseFwsl`.
+- **Verified** here: `cargo test` (read/write round-trip), `cargo check` on the
+  Writer backend (the crate + commands link), the `@234/desktop` unit tests
+  (mocked `invoke` + web fallback). The real OS dialog + on-disk open/save is a
+  manual desktop step.
+
+---
+
 ## 7. Open follow-ups (track as the shell is built)
 
 - Pre-commit and post-edit hooks (Section 12) — not part of the Step 1 checklist;

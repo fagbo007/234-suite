@@ -16,6 +16,12 @@ describe('234 Sheet app', () => {
     expect(screen.getByRole('button', { name: 'Export .xlsx' })).toBeTruthy();
   });
 
+  it('offers native .fwsh open/save', () => {
+    render(<App />);
+    expect(screen.getByRole('button', { name: 'Open' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Save' })).toBeTruthy();
+  });
+
   it('opens the collaboration panel with a start-session control', () => {
     render(<App />);
     expect(screen.queryByRole('button', { name: 'Start session' })).toBeNull();

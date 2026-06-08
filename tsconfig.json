@@ -11,6 +11,7 @@
     { "path": "packages/ai-sidebar" },
     { "path": "packages/collab" },
     { "path": "packages/plugin-host" },
-    { "path": "packages/docs-site" }
+    { "path": "packages/docs-site" },
+    { "path": "packages/desktop" }
   ]
 }

@@ -7,6 +7,7 @@ import {
   useAiSidebar,
 } from '@234/ai-sidebar';
 import { exportDocx, importDocx, type ImportReport } from '@234/compat';
+import { openTextFile, saveTextFile } from '@234/desktop';
 import { loadPlugins, sampleProviderPlugin, type Plugin } from '@234/plugin-host';
 import {
   Button,
@@ -29,7 +30,7 @@ import {
   selectedImage,
   type SelectedImage,
 } from './editor/commands';
-import { docToMarkdown, markdownToDoc } from './editor/fwtr';
+import { docToMarkdown, markdownToDoc, parseFwtr, serializeFwtr } from './editor/fwtr';
 import { Editor } from './editor/Editor';
 import { FindReplace } from './editor/FindReplace';
 import { ImagePanel } from './editor/ImagePanel';
@@ -42,6 +43,8 @@ import { bindStyles, type StylesBinding } from './collab/bindStyles';
 // In-tree, opt-in plugins loaded through the plugin host (root §9; plugin-api.md).
 // Append further in-tree plugins here; dynamic/remote loading is Phase-4-proper.
 const BUILTIN_PLUGINS: Plugin[] = [sampleProviderPlugin];
+
+const FWTR_FILTER = { name: '234 Writer', extensions: ['fwtr'] };
 
 export default function App() {
   const palette = useCommandPalette();
@@ -112,6 +115,32 @@ export default function App() {
     input.click();
   }, []);
 
+  // Save the document to a native .fwtr (OS dialog on desktop; download on web).
+  const saveFwtr = useCallback(() => {
+    const current = viewRef.current;
+    if (!current) return;
+    const text = serializeFwtr({
+      title: 'Untitled document',
+      styles: registryRef.current,
+      doc: current.state.doc,
+    });
+    void saveTextFile({ defaultName: 'document.fwtr', contents: text, filter: FWTR_FILTER });
+  }, []);
+
+  // Open a native .fwtr → replace the editor doc + style registry.
+  const openFwtr = useCallback(() => {
+    void openTextFile({ filter: FWTR_FILTER }).then((result) => {
+      if (!result) return;
+      const { doc, styles } = parseFwtr(result.contents);
+      const current = viewRef.current;
+      if (current) {
+        current.dispatch(current.state.tr.replaceWith(0, current.state.doc.content.size, doc.content));
+        current.focus();
+      }
+      setRegistry(styles);
+    });
+  }, []);
+
   // Export the current document to a downloadable .docx.
   const handleExportDocx = useCallback(() => {
     const current = viewRef.current;
@@ -177,6 +206,8 @@ export default function App() {
 
   useEffect(() => {
     const unregister = [
+      registerCommand({ id: 'writer.open', title: 'Open', group: 'File', run: openFwtr }),
+      registerCommand({ id: 'writer.save', title: 'Save', group: 'File', run: saveFwtr }),
       registerCommand({ id: 'writer.find', title: 'Find and replace', group: 'Edit', run: () => setFindOpen(true) }),
       registerCommand({ id: 'writer.insert-image', title: 'Insert image', group: 'Insert', run: pickImage }),
       registerCommand({ id: 'writer.open-docx', title: 'Open .docx', group: 'File', run: openDocx }),
@@ -190,7 +221,7 @@ export default function App() {
     return () => {
       for (const remove of unregister) remove();
     };
-  }, [pickImage, openDocx, handleExportDocx, ai]);
+  }, [pickImage, openDocx, handleExportDocx, openFwtr, saveFwtr, ai]);
 
   const applyStyle = (styleId: string) => {
     if (view) applyStyleToSelection(view, styleId);
@@ -201,6 +232,12 @@ export default function App() {
       <header className={styles.header}>
         <h1 className={styles.title}>234 Writer</h1>
         <div className={styles.actions}>
+          <Button variant="ghost" onClick={openFwtr}>
+            Open
+          </Button>
+          <Button variant="ghost" onClick={saveFwtr}>
+            Save
+          </Button>
           <Button variant="ghost" onClick={() => setStylesOpen((open) => !open)}>
             Styles
           </Button>

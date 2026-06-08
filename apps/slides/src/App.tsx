@@ -7,6 +7,7 @@ import {
   useAiSidebar,
 } from '@234/ai-sidebar';
 import { exportPptx, importPptx, type ImportReport } from '@234/compat';
+import { openTextFile, saveTextFile } from '@234/desktop';
 import { loadPlugins, sampleProviderPlugin, type Plugin } from '@234/plugin-host';
 import {
   Button,
@@ -37,6 +38,7 @@ import {
   tidySlide,
   updateObject,
 } from './model/deck';
+import { parseFwsl, serializeFwsl } from './model/fwsl';
 import { type Deck, type SlideObject } from './model/types';
 import { NotesPanel } from './notes/NotesPanel';
 import { SlidePanel } from './panel/SlidePanel';
@@ -57,6 +59,8 @@ function makeAiText(text: string): SlideObject {
 
 // In-tree, opt-in plugins loaded through the plugin host (root §9; plugin-api.md).
 const BUILTIN_PLUGINS: Plugin[] = [sampleProviderPlugin];
+
+const FWSL_FILTER = { name: '234 Slides', extensions: ['fwsl'] };
 
 export default function App() {
   const palette = useCommandPalette();
@@ -144,6 +148,27 @@ export default function App() {
     });
   }, []);
 
+  // Save the deck to a native .fwsl (OS dialog on desktop; download on web).
+  const saveFwsl = useCallback(() => {
+    void saveTextFile({
+      defaultName: 'deck.fwsl',
+      contents: serializeFwsl(stateRef.current.deck),
+      filter: FWSL_FILTER,
+    });
+  }, []);
+
+  // Open a native .fwsl → replace the deck.
+  const openFwsl = useCallback(() => {
+    void openTextFile({ filter: FWSL_FILTER }).then((result) => {
+      if (!result) return;
+      const deck = parseFwsl(result.contents);
+      if (deck.slides.length > 0) {
+        setActiveIndex(0);
+        setDeck(deck);
+      }
+    });
+  }, []);
+
   // Open a .pptx → replace the deck (via @234/compat) + show the import report.
   const openPptx = useCallback(() => {
     const input = document.createElement('input');
@@ -185,6 +210,8 @@ export default function App() {
       registerCommand({ id: 'slides.add-text', title: 'Add text', group: 'Insert', run: () => insert(makeText) }),
       registerCommand({ id: 'slides.add-rect', title: 'Add rectangle', group: 'Insert', run: () => insert(makeRect) }),
       registerCommand({ id: 'slides.import-image', title: 'Import image', group: 'Insert', run: () => importImage() }),
+      registerCommand({ id: 'slides.open', title: 'Open', group: 'File', run: openFwsl }),
+      registerCommand({ id: 'slides.save', title: 'Save', group: 'File', run: saveFwsl }),
       registerCommand({ id: 'slides.open-pptx', title: 'Open .pptx', group: 'File', run: openPptx }),
       registerCommand({ id: 'slides.export-pptx', title: 'Export .pptx', group: 'File', run: handleExportPptx }),
       registerCommand({ id: 'slides.tidy', title: 'Tidy slide', group: 'Arrange', run: () => tidy() }),
@@ -213,7 +240,7 @@ export default function App() {
     return () => {
       for (const remove of unregister) remove();
     };
-  }, [insert, tidy, importImage, ai, openPptx, handleExportPptx]);
+  }, [insert, tidy, importImage, ai, openPptx, handleExportPptx, openFwsl, saveFwsl]);
 
   const handleAdd = () => {
     setActiveIndex(deck.slides.length);
@@ -257,6 +284,12 @@ export default function App() {
             {issueCount} layout {issueCount === 1 ? 'issue' : 'issues'}
           </span>
         ) : null}
+        <Button variant="ghost" onClick={openFwsl}>
+          Open
+        </Button>
+        <Button variant="ghost" onClick={saveFwsl}>
+          Save
+        </Button>
         <Button variant="secondary" onClick={importImage}>
           Import image
         </Button>
