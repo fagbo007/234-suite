@@ -8,12 +8,13 @@ import {
 } from '@234/ai-sidebar';
 import { exportPptx, importPptx, type ImportReport } from '@234/compat';
 import { openTextFile, saveTextFile } from '@234/desktop';
-import { loadPlugins, sampleProviderPlugin, type Plugin } from '@234/plugin-host';
+import { loadPlugins, sampleProviderPlugin, usePluginManager, type Plugin } from '@234/plugin-host';
 import {
   Button,
   CollabPanel,
   CommandPalette,
   ImportReportPanel,
+  PluginManager,
   registerCommand,
   toggleTheme,
   useCommandPalette,
@@ -74,6 +75,7 @@ export default function App() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const collab = useCollabSession();
   const peers = usePresence(collab.doc, undefined, { slide: activeIndex });
+  const plugins = usePluginManager(BUILTIN_PLUGINS);
   const [collabOpen, setCollabOpen] = useState(false);
   const bindingRef = useRef<DeckBinding | null>(null);
   const applyingRemoteRef = useRef(false);
@@ -111,11 +113,15 @@ export default function App() {
     bindingRef.current.pushDeck(deck);
   }, [deck]);
 
-  // Load in-tree plugins through the host (commands + AI providers).
+  // Load the enabled in-tree plugins; re-runs when the user toggles one.
   useEffect(
     () =>
-      loadPlugins(BUILTIN_PLUGINS, { app: 'slides', registerCommand, registerAiProvider: registerProvider }),
-    [],
+      loadPlugins(plugins.enabledPlugins, {
+        app: 'slides',
+        registerCommand,
+        registerAiProvider: registerProvider,
+      }),
+    [plugins.enabledPlugins],
   );
 
   const insert = useCallback((factory: () => SlideObject) => {
@@ -358,6 +364,7 @@ export default function App() {
             })}
             provider={aiProvider}
           />
+          <PluginManager items={plugins.items} onToggle={plugins.setEnabled} />
         </AiSidebar>
       </div>
       <CommandPalette isOpen={palette.isOpen} onClose={palette.close} context={{ app: 'slides' }} />

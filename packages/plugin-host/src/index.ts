@@ -11,6 +11,18 @@ export {
   type LoadOptions,
 } from './host';
 export { sampleProviderPlugin, sampleCommandPlugin } from './examples';
+export {
+  isPluginEnabled,
+  setPluginEnabled,
+  getDisabledIds,
+  subscribePlugins,
+  enabledPlugins,
+} from './toggles';
+export {
+  usePluginManager,
+  type PluginManager,
+  type PluginManagerItem,
+} from './usePluginManager';
 
 // Re-exported for one-import authoring (type-only — erased at runtime).
 export { type Command } from '@234/shared';

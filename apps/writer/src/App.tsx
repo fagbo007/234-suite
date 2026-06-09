@@ -8,13 +8,14 @@ import {
 } from '@234/ai-sidebar';
 import { exportDocx, importDocx, type ImportReport } from '@234/compat';
 import { openTextFile, saveTextFile } from '@234/desktop';
-import { loadPlugins, sampleProviderPlugin, type Plugin } from '@234/plugin-host';
+import { loadPlugins, sampleProviderPlugin, usePluginManager, type Plugin } from '@234/plugin-host';
 import {
   Button,
   CollabPanel,
   CommandPalette,
   ImportReportPanel,
   OFFICE_SHORTCUTS,
+  PluginManager,
   registerCommand,
   toggleTheme,
   useCommandPalette,
@@ -59,6 +60,7 @@ export default function App() {
   const collab = useCollabSession();
   const peers = usePresence(collab.doc);
   const [collabOpen, setCollabOpen] = useState(false);
+  const plugins = usePluginManager(BUILTIN_PLUGINS);
 
   const viewRef = useRef<EditorView | null>(null);
   viewRef.current = view;
@@ -164,12 +166,17 @@ export default function App() {
     if (view) refreshStyledBlocks(view);
   }, [registry, view]);
 
-  // Load in-tree plugins through the host (commands + AI providers). Teardown on
-  // unmount fully removes their contributions.
+  // Load the enabled in-tree plugins through the host (commands + AI providers).
+  // Re-runs when the user toggles a plugin: cleanup tears down the old set, the
+  // rerun registers the new one (so disabling a provider removes it live).
   useEffect(
     () =>
-      loadPlugins(BUILTIN_PLUGINS, { app: 'writer', registerCommand, registerAiProvider: registerProvider }),
-    [],
+      loadPlugins(plugins.enabledPlugins, {
+        app: 'writer',
+        registerCommand,
+        registerAiProvider: registerProvider,
+      }),
+    [plugins.enabledPlugins],
   );
 
   // Collaboration: sync the style registry (definitions) over the shared doc.
@@ -299,6 +306,7 @@ export default function App() {
         <AiSidebar open={ai.isOpen} onClose={ai.close} app="writer">
           <AiSettings settings={aiSettings} onChange={setAiSettings} />
           <AiActionPanel actions={writerActions(view)} provider={aiProvider} />
+          <PluginManager items={plugins.items} onToggle={plugins.setEnabled} />
         </AiSidebar>
       </div>
 

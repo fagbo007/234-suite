@@ -22,10 +22,17 @@
   `useSyncExternalStore`-friendly store; `useAiSettings` resolves a
   plugin-registered provider and `AiSettings` lists it in the docked sidebar's
   provider selector — so a plugin's provider is genuinely user-selectable.
-- **App wiring**: each app keeps a `BUILTIN_PLUGINS` array and calls
-  `loadPlugins(BUILTIN_PLUGINS, { app, registerCommand, registerAiProvider })` in
-  a mount effect (cleanup = teardown). The shipped `sampleProviderPlugin`
-  (offline echo) appears as a selectable provider.
+- **Enable/disable** (persisted): `@234/plugin-host` `toggles.ts` is a
+  `localStorage`-backed store of disabled ids (default all-enabled) +
+  `usePluginManager(allPlugins)` (React hook, optional peer dep) returning the
+  plugin list, a setter, and the stable `enabledPlugins` subset. The shared
+  `PluginManager` component (structural props) renders a "Plugins" section in the
+  docked AI sidebar.
+- **App wiring**: each app keeps a `BUILTIN_PLUGINS` array, calls
+  `usePluginManager(BUILTIN_PLUGINS)`, and `loadPlugins(plugins.enabledPlugins,
+  { app, registerCommand, registerAiProvider })` in an effect keyed on the enabled
+  set — so toggling a plugin tears down + reloads live (disabling the shipped
+  `sampleProviderPlugin` removes it from the AI provider selector).
 
 ## Goal
 
@@ -136,7 +143,6 @@ first, because it has no surface of its own.
 
 - **Dynamic discovery / remote loading / sandboxing** (needs the Tauri backend to
   mediate filesystem/network/secret access). v1 stays in-tree, reviewed-like-code.
-- A settings UI to enable/disable plugins.
 - A host **key-storage API** for cloud-provider plugins (rides on the §6
   OS-keychain work — the host surface is deliberately narrow for now).
 - Per-app **capability injection** beyond the two register seams (e.g. editor /

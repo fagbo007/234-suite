@@ -1306,6 +1306,30 @@ Format: `YYYY-MM-DD | Decision | Rationale | Alternatives considered`
              `.fwsl` file is the source of truth, both peers run one code version).
              Slides 80 tests (+1 field-level merge); 100-slide gate held; Slides
              builds; `pnpm checks` 0/0. Real two-peer is the manual step.
+
+2026-06-09 | Plugin enable/disable UI (completes the A8 plugin story — the §17
+             "enable/disable settings UI" follow-up): `@234/plugin-host` gains a
+             `localStorage`-backed toggle store (`toggles.ts` — disabled-id set,
+             default all-enabled; cached snapshot + subscribe like the command/
+             provider registries) + `usePluginManager(allPlugins)` (React hook,
+             optional `react` peerDep mirroring `@234/collab`; jsdom-docblock test,
+             core stays node-tested). New shared `PluginManager` component
+             (structural props, like `CollabPanel`) renders a "Plugins" section in
+             the docked AI sidebar (owner-chosen placement). Each app calls
+             `usePluginManager(BUILTIN_PLUGINS)` and keys the `loadPlugins` effect on
+             `plugins.enabledPlugins`, so toggling tears down + reloads live —
+             disabling the sample provider removes it from the AI selector. |
+             Gives users control over which in-tree plugins load while keeping the
+             loader/host design intact; persisted, docked, user-invoked (§6). |
+             Alternatives: a dedicated palette-invoked "Manage plugins" panel
+             (rejected by owner — sidebar section is lighter wiring); host the hook
+             in @234/shared (rejected — would pull plugin-host's concerns into the
+             design system; optional-React-peerDep in plugin-host matches collab).
+             plugin-host 11 tests (+5) / shared PluginManager 2 / Writer +1 (toggle
+             removes the provider); full suite green; gates held; all apps build;
+             `pnpm checks` 0/0. Suite stays MIT (React already used). DEFERRED: a
+             host key-storage capability for cloud-provider plugins; dynamic/remote
+             discovery + sandbox (Phase-4-proper, needs the Tauri backend).
 ```
 
 ---

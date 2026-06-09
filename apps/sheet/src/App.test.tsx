@@ -40,5 +40,7 @@ describe('234 Sheet app', () => {
     expect(screen.getByRole('button', { name: /explain this formula/i })).toBeTruthy();
     // The in-tree sample plugin registered an extra provider, selectable here.
     expect(screen.getByRole('option', { name: 'Sample echo (plugin)' })).toBeTruthy();
+    // ...and it appears in the Plugins manager (toggle keyed by the plugin name).
+    expect(screen.getByLabelText('Sample echo provider')).toBeTruthy();
   });
 });

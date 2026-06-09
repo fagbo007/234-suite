@@ -8,13 +8,14 @@ import {
 } from '@234/ai-sidebar';
 import { exportXlsx, importXlsx, type ImportReport } from '@234/compat';
 import { pickOpenPath, pickSavePath, readTextFile, writeTextFile } from '@234/desktop';
-import { loadPlugins, sampleProviderPlugin, type Plugin } from '@234/plugin-host';
+import { loadPlugins, sampleProviderPlugin, usePluginManager, type Plugin } from '@234/plugin-host';
 import { SheetEngine } from '@234/formula-engine';
 import {
   Button,
   CollabPanel,
   CommandPalette,
   ImportReportPanel,
+  PluginManager,
   registerCommand,
   toggleTheme,
   useCommandPalette,
@@ -89,6 +90,7 @@ export default function App() {
     },
   });
   const peers = usePresence(collab.doc, undefined, { cell: active });
+  const plugins = usePluginManager(BUILTIN_PLUGINS);
   const commitCell = useCallback(
     (row: number, col: number, raw: string) => {
       collab.setCell(row, col, raw);
@@ -142,11 +144,15 @@ export default function App() {
     });
   }, [engine, bump]);
 
-  // Load in-tree plugins through the host (commands + AI providers).
+  // Load the enabled in-tree plugins; re-runs when the user toggles one.
   useEffect(
     () =>
-      loadPlugins(BUILTIN_PLUGINS, { app: 'sheet', registerCommand, registerAiProvider: registerProvider }),
-    [],
+      loadPlugins(plugins.enabledPlugins, {
+        app: 'sheet',
+        registerCommand,
+        registerAiProvider: registerProvider,
+      }),
+    [plugins.enabledPlugins],
   );
 
   // Open an .xlsx → replace the sheet's cells (via @234/compat) + show the report.
@@ -399,6 +405,7 @@ export default function App() {
             })}
             provider={aiProvider}
           />
+          <PluginManager items={plugins.items} onToggle={plugins.setEnabled} />
         </AiSidebar>
       </div>
       <CommandPalette isOpen={palette.isOpen} onClose={palette.close} context={{ app: 'sheet' }} />

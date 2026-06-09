@@ -1,6 +1,13 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
+import { getDisabledIds, setPluginEnabled } from '@234/plugin-host';
 import App from './App';
+
+afterEach(() => {
+  // The plugin toggle store is a persisted singleton — reset it between tests.
+  for (const id of [...getDisabledIds()]) setPluginEnabled(id, true);
+  localStorage.clear();
+});
 
 describe('234 Writer app', () => {
   it('renders the editor, styles panel, and command palette trigger', () => {
@@ -37,5 +44,17 @@ describe('234 Writer app', () => {
     expect(screen.getByRole('button', { name: /continue writing/i })).toBeTruthy();
     // The in-tree sample plugin registered an extra provider, selectable here.
     expect(screen.getByRole('option', { name: 'Sample echo (plugin)' })).toBeTruthy();
+    // ...and it appears in the Plugins manager (toggle keyed by the plugin name).
+    expect(screen.getByLabelText('Sample echo provider')).toBeTruthy();
+  });
+
+  it('disabling a plugin removes its contributions (the sample provider)', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'AI assistant' }));
+    expect(screen.getByRole('option', { name: 'Sample echo (plugin)' })).toBeTruthy();
+
+    // Toggle the plugin off → its provider unregisters and leaves the selector.
+    fireEvent.click(screen.getByLabelText('Sample echo provider'));
+    expect(screen.queryByRole('option', { name: 'Sample echo (plugin)' })).toBeNull();
   });
 });

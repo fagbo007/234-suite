@@ -32,6 +32,11 @@ export {
 } from '../components/ImportReportPanel';
 export { CollabPanel, type CollabPanelProps } from '../components/CollabPanel';
 export {
+  PluginManager,
+  type PluginManagerProps,
+  type PluginManagerItemLike,
+} from '../components/PluginManager';
+export {
   CommandPalette,
   type CommandPaletteProps,
   useCommandPalette,
