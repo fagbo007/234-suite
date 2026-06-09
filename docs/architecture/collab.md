@@ -101,10 +101,12 @@ cross-peer WebRTC/relay sync is validated manually across instances.
   ySyncPlugin binds the doc to a `Y.XmlFragment`. Writer + Sheet share the
   promoted **`CollabPanel`** in `@234/shared`. `y-prosemirror` + `yjs` are pinned
   to match `@234/collab` (single Yjs instance — proven by the fragment-convergence
-  test). The **style registry** (definitions) syncs via `bindStyles` — a `styles`
-  `Y.Map<styleId → JSON(Style)>` wired with a `[registry]` push effect + a guarded
-  remote `setRegistry` (block `styleId` attrs + images already sync as doc nodes),
-  so a peer renders styled blocks correctly. Cursor-presence UI styling is deferred.
+  test). The **style registry** syncs via `bindStyles` — a `styles`
+  `Y.Map<styleId → JSON(Style)>` (definitions) **plus a `styleOrder` `Y.Array`**
+  (list order), wired with a `[registry]` push effect + a guarded remote
+  `setRegistry` (block `styleId` attrs + images already sync as doc nodes), so a
+  peer renders styled blocks correctly **and sees the same StyleEditor order**.
+  Cursor-presence UI styling is deferred.
 - **Slides — DONE (field-level).** `apps/slides/src/collab/`: `bindDeck(doc,
   onRemoteChange)` maps the deck to nested Yjs — `order` (`Y.Array<slideId>`) +
   `slides` (`Y.Map<slideId → slideMap>`), each `slideMap` holding `notes`, an
@@ -142,7 +144,8 @@ syncs the deck at object granularity. **Collaboration breadth is complete.**
 
 - Follow-a-peer / viewport-follow, typing indicators; permissions, conflict-UX
   polish; field-level merge *within* the Slides `animations` array (objects now
-  merge field-by-field); registry `styleOrder`; serverless LAN (mDNS) discovery;
+  merge field-by-field); per-position CRDT merge of concurrent style reorders
+  (`styleOrder` is last-writer-ish today); serverless LAN (mDNS) discovery;
   deploying the relay.
 
 > **Collaboration is now live in all three apps** (Sheet · Writer · Slides) on the

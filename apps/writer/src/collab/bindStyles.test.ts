@@ -46,4 +46,24 @@ describe('bindStyles', () => {
 
     expect(guest.map((s) => s.id).sort()).toEqual(['body', 'title']);
   });
+
+  it('syncs the registry list order (styleOrder), including a reorder', () => {
+    const net = createMemoryNetwork();
+    const d1 = new CollabDoc();
+    const d2 = new CollabDoc();
+    const b1 = bindStyles(d1, () => {});
+    let remote: Style[] = [];
+    bindStyles(d2, (registry) => {
+      remote = registry;
+    });
+    net.transport().connect(d1, 'r');
+    net.transport().connect(d2, 'r');
+
+    b1.pushStyles([style('a', 'A'), style('b', 'B'), style('c', 'C')]);
+    expect(remote.map((s) => s.id)).toEqual(['a', 'b', 'c']);
+
+    // Reorder only (same definitions) → the peer sees the new order, not insertion order.
+    b1.pushStyles([style('c', 'C'), style('a', 'A'), style('b', 'B')]);
+    expect(remote.map((s) => s.id)).toEqual(['c', 'a', 'b']);
+  });
 });

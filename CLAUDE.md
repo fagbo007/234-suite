@@ -1352,6 +1352,26 @@ Format: `YYYY-MM-DD | Decision | Rationale | Alternatives considered`
              + empty panel); full suite green; gates held; all apps build; checks
              0/0. Suite stays MIT. DEFERRED: pinned/favourite files, auto-reopen,
              web-build recents (intentionally empty).
+
+2026-06-09 | Writer collab style-list order (the deferred A6b follow-up): `bindStyles`
+             now syncs a `styleOrder` `Y.Array<styleId>` alongside the `styles`
+             `Y.Map<styleId → JSON(Style)>`, so peers see the StyleEditor list in the
+             same order (was `Y.Map` insertion order, which drifts after edits/
+             reorders). `pushStyles` `syncOrder`s the array in the existing LOCAL txn
+             (rewrite-only-on-change, copied from `bindDeck`); `readStyles` reads in
+             `order` then appends any orphans (map order); a second `order.observe`
+             fires on a pure reorder (still map+array observers only — never
+             `doc.onUpdate`, so remote text edits don't churn the registry). |
+             Closes the last collab follow-up; the binding interface
+             (pushStyles/readStyles/seed/destroy) is unchanged → the Writer App is
+             untouched. |
+             Alternatives: per-position CRDT ordering for concurrent reorders
+             (deferred — `syncOrder` is last-writer-ish, fine for the common
+             one-side-reorders case); `doc.onUpdate` (rejected — would re-fire on
+             every remote keystroke). Writer 45 tests (+1 reorder-propagation);
+             100-page gate held; Writer builds; `pnpm checks` 0/0. Real two-peer is
+             the manual step. **Collaboration follow-ups now: only presence/cursor
+             polish + per-position reorder merge remain.**
 ```
 
 ---
