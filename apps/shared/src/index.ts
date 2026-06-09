@@ -37,6 +37,11 @@ export {
   type PluginManagerItemLike,
 } from '../components/PluginManager';
 export {
+  RecentFiles,
+  type RecentFilesProps,
+  type RecentFileLike,
+} from '../components/RecentFiles';
+export {
   CommandPalette,
   type CommandPaletteProps,
   useCommandPalette,

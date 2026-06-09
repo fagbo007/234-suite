@@ -7,7 +7,16 @@ import {
   useAiSidebar,
 } from '@234/ai-sidebar';
 import { exportXlsx, importXlsx, type ImportReport } from '@234/compat';
-import { pickOpenPath, pickSavePath, readTextFile, writeTextFile } from '@234/desktop';
+import {
+  addRecent,
+  baseName,
+  isDesktop,
+  pickOpenPath,
+  pickSavePath,
+  readTextFile,
+  useRecentFiles,
+  writeTextFile,
+} from '@234/desktop';
 import { loadPlugins, sampleProviderPlugin, usePluginManager, type Plugin } from '@234/plugin-host';
 import { SheetEngine } from '@234/formula-engine';
 import {
@@ -16,6 +25,7 @@ import {
   CommandPalette,
   ImportReportPanel,
   PluginManager,
+  RecentFiles,
   registerCommand,
   toggleTheme,
   useCommandPalette,
@@ -91,6 +101,8 @@ export default function App() {
   });
   const peers = usePresence(collab.doc, undefined, { cell: active });
   const plugins = usePluginManager(BUILTIN_PLUGINS);
+  const recents = useRecentFiles('sheet');
+  const [recentOpen, setRecentOpen] = useState(false);
   const commitCell = useCallback(
     (row: number, col: number, raw: string) => {
       collab.setCell(row, col, raw);
@@ -116,12 +128,16 @@ export default function App() {
       if (!path) return;
       void writeTextFile(path, csv);
       void writeTextFile(`${path}.meta`, JSON.stringify(meta, null, 2));
+      if (isDesktop()) addRecent('sheet', { path, name: baseName(path) });
     });
   }, [engine]);
 
-  // Open a native .fwsh → load cells + (best-effort) the sidecar meta.
-  const openFwsh = useCallback(() => {
-    void pickOpenPath(FWSH_FILTER).then(async (path) => {
+  // Open a native .fwsh → load cells + (best-effort) the sidecar meta. With a
+  // `path` (from the recent-files list) it re-reads directly, skipping the dialog.
+  const openFwsh = useCallback(
+    (recentPath?: string) => {
+    void (async () => {
+      const path = recentPath ?? (await pickOpenPath(FWSH_FILTER));
       if (!path) return;
       const csv = await readTextFile(path);
       engine.destroy();
@@ -140,9 +156,12 @@ export default function App() {
       } catch {
         /* no sidecar (or invalid) — cells still loaded */
       }
+      if (isDesktop()) addRecent('sheet', { path, name: baseName(path) });
       bump();
-    });
-  }, [engine, bump]);
+    })();
+    },
+    [engine, bump],
+  );
 
   // Load the enabled in-tree plugins; re-runs when the user toggles one.
   useEffect(
@@ -261,8 +280,9 @@ export default function App() {
         group: 'Collaborate',
         run: () => setPanel('collab'),
       }),
-      registerCommand({ id: 'sheet.open', title: 'Open', group: 'File', run: openFwsh }),
+      registerCommand({ id: 'sheet.open', title: 'Open', group: 'File', run: () => openFwsh() }),
       registerCommand({ id: 'sheet.save', title: 'Save', group: 'File', run: saveFwsh }),
+      registerCommand({ id: 'sheet.recent', title: 'Open recent', group: 'File', run: () => setRecentOpen(true) }),
       registerCommand({ id: 'sheet.open-xlsx', title: 'Open .xlsx', group: 'File', run: openXlsx }),
       registerCommand({ id: 'sheet.export-xlsx', title: 'Export .xlsx', group: 'File', run: handleExportXlsx }),
       registerCommand({
@@ -294,8 +314,11 @@ export default function App() {
       <header className={styles.header}>
         <h1 className={styles.title}>234 Sheet</h1>
         <div className={styles.actions}>
-          <Button variant="ghost" onClick={openFwsh}>
+          <Button variant="ghost" onClick={() => openFwsh()}>
             Open
+          </Button>
+          <Button variant="ghost" onClick={() => setRecentOpen((open) => !open)}>
+            Recent
           </Button>
           <Button variant="ghost" onClick={saveFwsh}>
             Save
@@ -322,6 +345,9 @@ export default function App() {
       </header>
       {importReport ? (
         <ImportReportPanel report={importReport} onClose={() => setImportReport(null)} />
+      ) : null}
+      {recentOpen ? (
+        <RecentFiles items={recents.items} onOpen={(path) => openFwsh(path)} onClear={recents.clear} />
       ) : null}
       <div className={styles.formulaRow}>
         <NameBox

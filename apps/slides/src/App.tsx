@@ -7,7 +7,15 @@ import {
   useAiSidebar,
 } from '@234/ai-sidebar';
 import { exportPptx, importPptx, type ImportReport } from '@234/compat';
-import { openTextFile, saveTextFile } from '@234/desktop';
+import {
+  addRecent,
+  baseName,
+  isDesktop,
+  openTextFile,
+  readTextFile,
+  saveTextFile,
+  useRecentFiles,
+} from '@234/desktop';
 import { loadPlugins, sampleProviderPlugin, usePluginManager, type Plugin } from '@234/plugin-host';
 import {
   Button,
@@ -15,6 +23,7 @@ import {
   CommandPalette,
   ImportReportPanel,
   PluginManager,
+  RecentFiles,
   registerCommand,
   toggleTheme,
   useCommandPalette,
@@ -76,6 +85,8 @@ export default function App() {
   const collab = useCollabSession();
   const peers = usePresence(collab.doc, undefined, { slide: activeIndex });
   const plugins = usePluginManager(BUILTIN_PLUGINS);
+  const recents = useRecentFiles('slides');
+  const [recentOpen, setRecentOpen] = useState(false);
   const [collabOpen, setCollabOpen] = useState(false);
   const bindingRef = useRef<DeckBinding | null>(null);
   const applyingRemoteRef = useRef(false);
@@ -154,26 +165,38 @@ export default function App() {
     });
   }, []);
 
+  // Record a recently opened/saved file (desktop only — a web "path" is just a
+  // file name with no re-readable handle).
+  const recordRecent = useCallback((path: string) => {
+    if (isDesktop()) addRecent('slides', { path, name: baseName(path) });
+  }, []);
+
   // Save the deck to a native .fwsl (OS dialog on desktop; download on web).
   const saveFwsl = useCallback(() => {
     void saveTextFile({
       defaultName: 'deck.fwsl',
       contents: serializeFwsl(stateRef.current.deck),
       filter: FWSL_FILTER,
+    }).then((path) => {
+      if (path) recordRecent(path);
     });
-  }, []);
+  }, [recordRecent]);
 
-  // Open a native .fwsl → replace the deck.
-  const openFwsl = useCallback(() => {
-    void openTextFile({ filter: FWSL_FILTER }).then((result) => {
+  // Open a native .fwsl → replace the deck. With a `path` (from the recent-files
+  // list) it re-reads directly, skipping the dialog.
+  const loadFwsl = useCallback(
+    async (path?: string) => {
+      const result = path ? { path, contents: await readTextFile(path) } : await openTextFile({ filter: FWSL_FILTER });
       if (!result) return;
       const deck = parseFwsl(result.contents);
       if (deck.slides.length > 0) {
         setActiveIndex(0);
         setDeck(deck);
       }
-    });
-  }, []);
+      recordRecent(result.path);
+    },
+    [recordRecent],
+  );
 
   // Open a .pptx → replace the deck (via @234/compat) + show the import report.
   const openPptx = useCallback(() => {
@@ -216,8 +239,9 @@ export default function App() {
       registerCommand({ id: 'slides.add-text', title: 'Add text', group: 'Insert', run: () => insert(makeText) }),
       registerCommand({ id: 'slides.add-rect', title: 'Add rectangle', group: 'Insert', run: () => insert(makeRect) }),
       registerCommand({ id: 'slides.import-image', title: 'Import image', group: 'Insert', run: () => importImage() }),
-      registerCommand({ id: 'slides.open', title: 'Open', group: 'File', run: openFwsl }),
+      registerCommand({ id: 'slides.open', title: 'Open', group: 'File', run: () => void loadFwsl() }),
       registerCommand({ id: 'slides.save', title: 'Save', group: 'File', run: saveFwsl }),
+      registerCommand({ id: 'slides.recent', title: 'Open recent', group: 'File', run: () => setRecentOpen(true) }),
       registerCommand({ id: 'slides.open-pptx', title: 'Open .pptx', group: 'File', run: openPptx }),
       registerCommand({ id: 'slides.export-pptx', title: 'Export .pptx', group: 'File', run: handleExportPptx }),
       registerCommand({ id: 'slides.tidy', title: 'Tidy slide', group: 'Arrange', run: () => tidy() }),
@@ -246,7 +270,7 @@ export default function App() {
     return () => {
       for (const remove of unregister) remove();
     };
-  }, [insert, tidy, importImage, ai, openPptx, handleExportPptx, openFwsl, saveFwsl]);
+  }, [insert, tidy, importImage, ai, openPptx, handleExportPptx, loadFwsl, saveFwsl]);
 
   const handleAdd = () => {
     setActiveIndex(deck.slides.length);
@@ -290,11 +314,14 @@ export default function App() {
             {issueCount} layout {issueCount === 1 ? 'issue' : 'issues'}
           </span>
         ) : null}
-        <Button variant="ghost" onClick={openFwsl}>
+        <Button variant="ghost" onClick={() => void loadFwsl()}>
           Open
         </Button>
         <Button variant="ghost" onClick={saveFwsl}>
           Save
+        </Button>
+        <Button variant="ghost" onClick={() => setRecentOpen((open) => !open)}>
+          Recent
         </Button>
         <Button variant="secondary" onClick={importImage}>
           Import image
@@ -338,6 +365,9 @@ export default function App() {
           onLeave={collab.leave}
           peers={peers}
         />
+      ) : null}
+      {recentOpen ? (
+        <RecentFiles items={recents.items} onOpen={(path) => void loadFwsl(path)} onClear={recents.clear} />
       ) : null}
       <div className={styles.workspace}>
         <SlidePanel

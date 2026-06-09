@@ -12,3 +12,12 @@ export {
   openTextFile,
   saveTextFile,
 } from './files';
+export {
+  type RecentFile,
+  addRecent,
+  getRecent,
+  clearRecent,
+  subscribeRecent,
+  baseName,
+} from './recents';
+export { useRecentFiles, type UseRecentFiles } from './useRecentFiles';

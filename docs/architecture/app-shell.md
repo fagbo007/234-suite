@@ -200,10 +200,15 @@ existed (browser file-input + download).
   the `.fwsh.meta` sidecar (`writeTextFile(path)` + `writeTextFile(path+'.meta')`),
   `parseFwshCsv`/`applyCells`/`applyNamedRanges` on open; Slides
   `serializeFwsl`/`parseFwsl`.
+- **Recent files** — `@234/desktop` keeps a persisted, per-app recent list
+  (`recents.ts` + `useRecentFiles`); the shared `RecentFiles` panel (a "Recent"
+  header button / "Open recent" palette command) re-opens an entry via
+  `readTextFile(path)`. Recording is **`isDesktop()`-gated** (a web "path" is just
+  a file name), so the web build keeps an empty list rather than a broken re-open.
 - **Verified** here: `cargo test` (read/write round-trip), `cargo check` on the
   Writer backend (the crate + commands link), the `@234/desktop` unit tests
-  (mocked `invoke` + web fallback). The real OS dialog + on-disk open/save is a
-  manual desktop step.
+  (mocked `invoke` + web fallback; recents store + hook). The real OS dialog +
+  on-disk open/save (and recent re-open) is a manual desktop step.
 
 ---
 

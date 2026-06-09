@@ -7,7 +7,15 @@ import {
   useAiSidebar,
 } from '@234/ai-sidebar';
 import { exportDocx, importDocx, type ImportReport } from '@234/compat';
-import { openTextFile, saveTextFile } from '@234/desktop';
+import {
+  addRecent,
+  baseName,
+  isDesktop,
+  openTextFile,
+  readTextFile,
+  saveTextFile,
+  useRecentFiles,
+} from '@234/desktop';
 import { loadPlugins, sampleProviderPlugin, usePluginManager, type Plugin } from '@234/plugin-host';
 import {
   Button,
@@ -16,6 +24,7 @@ import {
   ImportReportPanel,
   OFFICE_SHORTCUTS,
   PluginManager,
+  RecentFiles,
   registerCommand,
   toggleTheme,
   useCommandPalette,
@@ -61,6 +70,8 @@ export default function App() {
   const peers = usePresence(collab.doc);
   const [collabOpen, setCollabOpen] = useState(false);
   const plugins = usePluginManager(BUILTIN_PLUGINS);
+  const recents = useRecentFiles('writer');
+  const [recentOpen, setRecentOpen] = useState(false);
 
   const viewRef = useRef<EditorView | null>(null);
   viewRef.current = view;
@@ -117,6 +128,12 @@ export default function App() {
     input.click();
   }, []);
 
+  // Record a recently opened/saved file (desktop only — a web "path" is just a
+  // file name with no re-readable handle).
+  const recordRecent = useCallback((path: string) => {
+    if (isDesktop()) addRecent('writer', { path, name: baseName(path) });
+  }, []);
+
   // Save the document to a native .fwtr (OS dialog on desktop; download on web).
   const saveFwtr = useCallback(() => {
     const current = viewRef.current;
@@ -126,12 +143,16 @@ export default function App() {
       styles: registryRef.current,
       doc: current.state.doc,
     });
-    void saveTextFile({ defaultName: 'document.fwtr', contents: text, filter: FWTR_FILTER });
-  }, []);
+    void saveTextFile({ defaultName: 'document.fwtr', contents: text, filter: FWTR_FILTER }).then((path) => {
+      if (path) recordRecent(path);
+    });
+  }, [recordRecent]);
 
-  // Open a native .fwtr → replace the editor doc + style registry.
-  const openFwtr = useCallback(() => {
-    void openTextFile({ filter: FWTR_FILTER }).then((result) => {
+  // Open a native .fwtr → replace the editor doc + style registry. With a `path`
+  // (from the recent-files list) it re-reads directly, skipping the dialog.
+  const loadFwtr = useCallback(
+    async (path?: string) => {
+      const result = path ? { path, contents: await readTextFile(path) } : await openTextFile({ filter: FWTR_FILTER });
       if (!result) return;
       const { doc, styles } = parseFwtr(result.contents);
       const current = viewRef.current;
@@ -140,8 +161,10 @@ export default function App() {
         current.focus();
       }
       setRegistry(styles);
-    });
-  }, []);
+      recordRecent(result.path);
+    },
+    [recordRecent],
+  );
 
   // Export the current document to a downloadable .docx.
   const handleExportDocx = useCallback(() => {
@@ -213,8 +236,9 @@ export default function App() {
 
   useEffect(() => {
     const unregister = [
-      registerCommand({ id: 'writer.open', title: 'Open', group: 'File', run: openFwtr }),
+      registerCommand({ id: 'writer.open', title: 'Open', group: 'File', run: () => void loadFwtr() }),
       registerCommand({ id: 'writer.save', title: 'Save', group: 'File', run: saveFwtr }),
+      registerCommand({ id: 'writer.recent', title: 'Open recent', group: 'File', run: () => setRecentOpen(true) }),
       registerCommand({ id: 'writer.find', title: 'Find and replace', group: 'Edit', run: () => setFindOpen(true) }),
       registerCommand({ id: 'writer.insert-image', title: 'Insert image', group: 'Insert', run: pickImage }),
       registerCommand({ id: 'writer.open-docx', title: 'Open .docx', group: 'File', run: openDocx }),
@@ -228,7 +252,7 @@ export default function App() {
     return () => {
       for (const remove of unregister) remove();
     };
-  }, [pickImage, openDocx, handleExportDocx, openFwtr, saveFwtr, ai]);
+  }, [pickImage, openDocx, handleExportDocx, loadFwtr, saveFwtr, ai]);
 
   const applyStyle = (styleId: string) => {
     if (view) applyStyleToSelection(view, styleId);
@@ -239,11 +263,14 @@ export default function App() {
       <header className={styles.header}>
         <h1 className={styles.title}>234 Writer</h1>
         <div className={styles.actions}>
-          <Button variant="ghost" onClick={openFwtr}>
+          <Button variant="ghost" onClick={() => void loadFwtr()}>
             Open
           </Button>
           <Button variant="ghost" onClick={saveFwtr}>
             Save
+          </Button>
+          <Button variant="ghost" onClick={() => setRecentOpen((open) => !open)}>
+            Recent
           </Button>
           <Button variant="ghost" onClick={() => setStylesOpen((open) => !open)}>
             Styles
@@ -287,6 +314,10 @@ export default function App() {
           onLeave={collab.leave}
           peers={peers}
         />
+      ) : null}
+
+      {recentOpen ? (
+        <RecentFiles items={recents.items} onOpen={(path) => void loadFwtr(path)} onClear={recents.clear} />
       ) : null}
 
       <div className={styles.workspace}>

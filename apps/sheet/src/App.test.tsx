@@ -20,6 +20,14 @@ describe('234 Sheet app', () => {
     render(<App />);
     expect(screen.getByRole('button', { name: 'Open' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Save' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Recent' })).toBeTruthy();
+  });
+
+  it('opens the recent-files panel (empty in the web build)', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Recent' }));
+    expect(screen.getByRole('region', { name: 'Recent files' })).toBeTruthy();
+    expect(screen.getByText('No recent files')).toBeTruthy();
   });
 
   it('opens the collaboration panel with a start-session control', () => {

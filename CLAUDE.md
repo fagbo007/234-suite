@@ -1330,6 +1330,28 @@ Format: `YYYY-MM-DD | Decision | Rationale | Alternatives considered`
              `pnpm checks` 0/0. Suite stays MIT (React already used). DEFERRED: a
              host key-storage capability for cloud-provider plugins; dynamic/remote
              discovery + sandbox (Phase-4-proper, needs the Tauri backend).
+
+2026-06-09 | Recent files (native-I/O follow-up): `@234/desktop` gains a persisted,
+             per-app recent list (`recents.ts` — localStorage, most-recent-first,
+             dedup by path, cap 8; cached snapshot + subscribe) + `useRecentFiles`
+             (React hook, optional `react` peerDep mirroring plugin-host/collab) +
+             a `baseName` helper. New shared `RecentFiles` panel (structural props,
+             like `PluginManager`/`CollabPanel`) — a "Recent" header button / "Open
+             recent" palette command. Each app's open callback was refactored to
+             `load<App>(path?)` (a `path` re-reads via `readTextFile`, skipping the
+             dialog) and records the path on open + save. |
+             Lets users re-open a recent document without the dialog while reusing
+             the existing serializers + the `@234/desktop` bridge. |
+             Recording is **`isDesktop()`-gated** — a web "path" is just a file name
+             with no re-readable handle, so the web build keeps an empty list rather
+             than a broken re-open (the real re-read is a desktop step). Alternatives:
+             a dedicated palette-only surface (rejected — a header button + panel
+             matches Open/Save); store recents in each app (rejected — the bridge
+             owns file concerns, like plugin-host owns toggles). desktop 12 tests
+             (+5: recents + hook) / shared RecentFiles 2 / each app +1 (Recent button
+             + empty panel); full suite green; gates held; all apps build; checks
+             0/0. Suite stays MIT. DEFERRED: pinned/favourite files, auto-reopen,
+             web-build recents (intentionally empty).
 ```
 
 ---
