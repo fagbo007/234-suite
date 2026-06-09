@@ -1372,6 +1372,23 @@ Format: `YYYY-MM-DD | Decision | Rationale | Alternatives considered`
              100-page gate held; Writer builds; `pnpm checks` 0/0. Real two-peer is
              the manual step. **Collaboration follow-ups now: only presence/cursor
              polish + per-position reorder merge remain.**
+
+2026-06-09 | Slides collab animations-array field-level merge: `bindDeck` now
+             stores each object's `animations` as a nested `Y.Map<animationId →
+             JSON(Animation)>` (was a single JSON-string field), so concurrent
+             additions/edits to the *same object's* animation list merge (A adds an
+             entrance, B adds an exit → both survive) instead of per-list LWW.
+             `objToFields` emits scalars only; `fieldsToObj` reads the nested map;
+             `pushDeck` upserts/deletes animations by id and excludes `animations`
+             from the scalar-delete loop. The binding interface is unchanged → App
+             untouched. |
+             The last within-object merge gap closed — Slides now merges at object,
+             field, and animation granularity. |
+             Alternatives: per-position order CRDT for the animation list (deferred
+             — animations read in map insertion order; concurrent reorders are
+             last-writer-ish, like slide/object/styleOrder). Slides 82 tests (+1
+             animations-merge); 100-slide gate held; Slides builds; `pnpm checks`
+             0/0. Real two-peer is the manual step.
 ```
 
 ---

@@ -112,12 +112,13 @@ cross-peer WebRTC/relay sync is validated manually across instances.
   `slides` (`Y.Map<slideId → slideMap>`), each `slideMap` holding `notes`, an
   `objectOrder` `Y.Array`, and an `objects` `Y.Map<objectId → Y.Map<field →
   value>>`. Each object is its own `Y.Map` whose keys are the object's scalar
-  fields (`x`/`y`/.../`fontSize`/`fill`/`src`; `animations` as a JSON-string
-  field), so **concurrent edits to different objects — or to different fields of
-  the same object — all merge** (proven by offline-edit-then-reconnect tests at
-  both object and field granularity). The shared `useCollabSession` hook owns the
-  session; the App syncs via a single `[deck]` push effect + a guarded remote
-  `setDeck`, so no `setDeck` call site changed.
+  fields (`x`/`y`/.../`fontSize`/`fill`/`src`), plus an `animations` nested
+  `Y.Map<animationId → JSON(Animation)>`, so **concurrent edits to different
+  objects — to different fields of the same object — or to different animations
+  of the same object — all merge** (proven by offline-edit-then-reconnect tests
+  at object, field, and animation granularity). The shared `useCollabSession`
+  hook owns the session; the App syncs via a single `[deck]` push effect + a
+  guarded remote `setDeck`, so no `setDeck` call site changed.
 
 Writer and Slides share **`useCollabSession`** (`@234/collab`) — one model-free
 session hook (start/join/leave, exposes the live `CollabDoc`; WebRTC default,
@@ -143,10 +144,9 @@ Sheet syncs cells + named refs + column types + chart; Writer syncs the document
 syncs the deck at object granularity. **Collaboration breadth is complete.**
 
 - Follow-a-peer / viewport-follow, typing indicators; permissions, conflict-UX
-  polish; field-level merge *within* the Slides `animations` array (objects now
-  merge field-by-field); per-position CRDT merge of concurrent style reorders
-  (`styleOrder` is last-writer-ish today); serverless LAN (mDNS) discovery;
-  deploying the relay.
+  polish; per-position CRDT merge of concurrent reorders (slide/object/animation
+  order + `styleOrder` are last-writer-ish today); serverless LAN (mDNS)
+  discovery; deploying the relay.
 
 > **Collaboration is now live in all three apps** (Sheet · Writer · Slides) on the
 > shared `@234/collab` core + relay. Real cross-peer sync over WebRTC/relay is the

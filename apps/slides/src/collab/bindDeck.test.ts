@@ -141,4 +141,48 @@ describe('bindDeck', () => {
       expect((o1 as { fontSize?: number } | undefined)?.fontSize).toBe(48);
     }
   });
+
+  it('merges concurrent additions to the same object’s animations list', () => {
+    const net = createMemoryNetwork();
+    const d1 = new CollabDoc();
+    const d2 = new CollabDoc();
+    const b1 = bindDeck(d1, () => {});
+    const b2 = bindDeck(d2, () => {});
+    const t1 = net.transport();
+    const t2 = net.transport();
+    t1.connect(d1, 'r');
+    t2.connect(d2, 'r');
+
+    const anim = (id: string, category: 'entrance' | 'emphasis' | 'exit', effect: string) => ({
+      id,
+      category,
+      effect,
+      durationMs: 500,
+    });
+    const withAnims = (...ids: ReturnType<typeof anim>[]): SlideObject => ({
+      ...text('o1'),
+      animations: ids,
+    });
+
+    // Shared start: o1 has one animation.
+    b1.pushDeck({ slides: [{ id: 's1', objects: [withAnims(anim('x', 'entrance', 'fade'))] }] });
+
+    // Peer 2 offline; each peer adds a DIFFERENT animation to the same object.
+    t2.disconnect();
+    b1.pushDeck({
+      slides: [{ id: 's1', objects: [withAnims(anim('x', 'entrance', 'fade'), anim('a', 'emphasis', 'pulse'))] }],
+    });
+    b2.pushDeck({
+      slides: [{ id: 's1', objects: [withAnims(anim('x', 'entrance', 'fade'), anim('b', 'exit', 'fade'))] }],
+    });
+
+    // Reconnect → all three animations survive on both peers (no list clobber).
+    t2.connect(d2, 'r');
+
+    for (const read of [b1.readDeck(), b2.readDeck()]) {
+      const o1 = read.slides[0]?.objects.find((o) => o.id === 'o1');
+      const animIds = (o1?.animations ?? []).map((a) => a.id).sort();
+      expect(animIds).toEqual(['a', 'b', 'x']);
+    }
+  });
 });

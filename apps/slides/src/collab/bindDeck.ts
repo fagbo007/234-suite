@@ -10,11 +10,12 @@
  *     slideMap.objects      : Y.Map<objectId → Y.Map<fieldName → value>>
  *
  * Each object is its own `Y.Map` whose keys are the object's scalar fields
- * (`x`/`y`/`width`/`height`/`kind`/`text`/`fontSize`/`fill`/`src`, plus
- * `animations` as a single JSON-string field). So two peers editing different
- * objects — or different fields of the same object (A drags `x`, B edits
- * `fontSize`) — all survive a merge. Local pushes carry a `LOCAL` transaction
- * origin so the remote listener ignores them.
+ * (`x`/`y`/`width`/`height`/`kind`/`text`/`fontSize`/`fill`/`src`), plus an
+ * `animations` nested `Y.Map<animationId → JSON(Animation)>`. So two peers
+ * editing different objects — different fields of the same object (A drags `x`,
+ * B edits `fontSize`) — or different animations of the same object (A adds an
+ * entrance, B adds an exit) — all survive a merge. Local pushes carry a `LOCAL`
+ * transaction origin so the remote listener ignores them.
  *
  * No cross-version migration: the collab doc is ephemeral session state (the
  * `.fwsl` file is the on-disk source of truth) and both peers run one code version.
@@ -35,23 +36,31 @@ export interface DeckBinding {
 type YSlide = Y.Map<unknown>;
 type YObjectFields = Y.Map<unknown>;
 type YObjects = Y.Map<YObjectFields>;
+type YAnimations = Y.Map<string>; // animationId → JSON(Animation)
 type YOrder = Y.Array<string>;
 
-/** Flatten an object to its stored fields (`animations` → a JSON-string field). */
+/** The object's **scalar** stored fields (animations are handled separately as a
+ *  nested map so they merge per-animation). */
 function objToFields(object: SlideObject): Record<string, unknown> {
   const fields: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(object)) {
-    if (value === undefined) continue;
-    fields[key] = key === 'animations' ? JSON.stringify(value) : value;
+    if (value === undefined || key === 'animations') continue;
+    fields[key] = value;
   }
   return fields;
 }
 
-/** Rebuild an object from its field map (`animations` parsed back from JSON). */
+/** Rebuild an object from its field map (scalars + the nested `animations` map). */
 function fieldsToObj(objMap: YObjectFields): SlideObject {
   const out: Record<string, unknown> = {};
   objMap.forEach((value, key) => {
-    out[key] = key === 'animations' ? JSON.parse(value as string) : value;
+    if (key === 'animations') {
+      const anims: unknown[] = [];
+      (value as YAnimations).forEach((json) => anims.push(JSON.parse(json)));
+      if (anims.length > 0) out.animations = anims;
+    } else {
+      out[key] = value;
+    }
   });
   return out as unknown as SlideObject;
 }
@@ -131,14 +140,38 @@ export function bindDeck(doc: CollabDoc, onRemoteChange: (deck: Deck) => void): 
             objMap = new Y.Map<unknown>();
             objects.set(object.id, objMap);
           }
-          // Set each changed field; delete fields no longer present. Distinct
-          // fields are distinct Y.Map keys, so concurrent field edits merge.
+          // Set each changed scalar field. Distinct fields are distinct Y.Map
+          // keys, so concurrent field edits to the same object merge.
           const fields = objToFields(object);
           for (const [key, value] of Object.entries(fields)) {
             if (objMap.get(key) !== value) objMap.set(key, value);
           }
+
+          // Animations: a nested Y.Map<animId → JSON> so concurrent edits to one
+          // object's animation list merge (per-animation LWW).
+          const anims = object.animations ?? [];
+          if (anims.length === 0) {
+            if (objMap.get('animations') !== undefined) objMap.delete('animations');
+          } else {
+            let animMap = objMap.get('animations');
+            if (!(animMap instanceof Y.Map)) {
+              animMap = new Y.Map<string>();
+              objMap.set('animations', animMap);
+            }
+            const typed = animMap as YAnimations;
+            const animIds = anims.map((a) => a.id);
+            for (const animation of anims) {
+              const json = JSON.stringify(animation);
+              if (typed.get(animation.id) !== json) typed.set(animation.id, json);
+            }
+            for (const k of [...typed.keys()]) {
+              if (!animIds.includes(k)) typed.delete(k);
+            }
+          }
+
+          // Delete removed scalar fields (`animations` is managed above).
           for (const key of [...objMap.keys()]) {
-            if (!(key in fields)) objMap.delete(key);
+            if (key !== 'animations' && !(key in fields)) objMap.delete(key);
           }
         }
         for (const key of [...objects.keys()]) {
