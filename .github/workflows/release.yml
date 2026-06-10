@@ -4,14 +4,19 @@ name: Release
 # on a version tag, attaches them to a GitHub Release (root CLAUDE.md §3.2, §9).
 # Like ci.yml, this is dormant until a public remote + a `v*` tag exist.
 #
-# Per OS: Windows → NSIS + MSI (MSI builds here — the CI checkout path has no
-# spaces, unlike a local OneDrive checkout); macOS → .app + .dmg; Linux → .deb +
-# .AppImage. Then the matching suite-assembly script bundles all four apps.
+# Per OS: Windows → NSIS (MSI is disabled: WiX light.exe fails even on the
+# space-free CI checkout — see issue #1); macOS → .app + .dmg;
+# Linux → .deb + .AppImage. Then the matching suite-assembly script bundles
+# all four apps.
 
 on:
   push:
     tags: ['v*']
   workflow_dispatch:
+
+# The release step creates the GitHub Release; the default token is read-only.
+permissions:
+  contents: write
 
 jobs:
   bundle:
@@ -22,7 +27,7 @@ jobs:
       matrix:
         include:
           - os: windows-latest
-            bundles: nsis,msi
+            bundles: nsis
             suite: pwsh installer/build-suite.ps1
           - os: macos-latest
             bundles: app,dmg
