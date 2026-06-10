@@ -29,8 +29,10 @@ jobs:
           - os: windows-latest
             bundles: nsis
             suite: pwsh installer/build-suite.ps1
+          # macos-latest is arm64; the universal target also serves Intel macs.
           - os: macos-latest
             bundles: app,dmg
+            target: --target universal-apple-darwin
             suite: bash installer/build-suite-macos.sh
           - os: ubuntu-latest
             bundles: deb,appimage
@@ -47,6 +49,10 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
 
+      - name: Add macOS universal targets
+        if: matrix.os == 'macos-latest'
+        run: rustup target add x86_64-apple-darwin aarch64-apple-darwin
+
       - name: Install Linux Tauri dependencies
         if: matrix.os == 'ubuntu-latest'
         run: |
@@ -60,7 +66,7 @@ jobs:
         shell: bash
         run: |
           for app in writer sheet slides launcher; do
-            pnpm --filter "@234/$app" tauri build --bundles ${{ matrix.bundles }}
+            pnpm --filter "@234/$app" tauri build --bundles ${{ matrix.bundles }} ${{ matrix.target }}
           done
 
       - name: Resolve version
@@ -80,6 +86,7 @@ jobs:
           path: |
             installer/dist/*
             apps/*/src-tauri/target/release/bundle/**/*
+            apps/*/src-tauri/target/universal-apple-darwin/release/bundle/**/*
           if-no-files-found: error
 
       - name: Attach to release (on tag)
@@ -93,6 +100,6 @@ jobs:
             installer/dist/*
             apps/*/src-tauri/target/release/bundle/nsis/*.exe
             apps/*/src-tauri/target/release/bundle/msi/*.msi
-            apps/*/src-tauri/target/release/bundle/dmg/*.dmg
+            apps/*/src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
             apps/*/src-tauri/target/release/bundle/deb/*.deb
             apps/*/src-tauri/target/release/bundle/appimage/*.AppImage

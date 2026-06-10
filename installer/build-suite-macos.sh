@@ -21,7 +21,14 @@ STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
 
 app_bundle() { # app id -> "<Product>.app" path under its Tauri bundle output
-  echo "$REPO/apps/$1/src-tauri/target/release/bundle/macos/$2.app"
+  # A `--target universal-apple-darwin` build (the release.yml path) nests its
+  # bundles under the target triple; a plain host build does not.
+  local universal="$REPO/apps/$1/src-tauri/target/universal-apple-darwin/release/bundle/macos/$2.app"
+  if [ -d "$universal" ]; then
+    echo "$universal"
+  else
+    echo "$REPO/apps/$1/src-tauri/target/release/bundle/macos/$2.app"
+  fi
 }
 
 declare -a APPS=(
