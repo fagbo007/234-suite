@@ -1389,6 +1389,32 @@ Format: `YYYY-MM-DD | Decision | Rationale | Alternatives considered`
              last-writer-ish, like slide/object/styleOrder). Slides 82 tests (+1
              animations-merge); 100-slide gate held; Slides builds; `pnpm checks`
              0/0. Real two-peer is the manual step.
+
+2026-06-10 | PUBLISHED + first release shipped: the repo is public at
+             github.com/fagbo007/234-suite (renamed from Project-234; description
+             + topics set; p1-p3/bug/needs-triage/blocked/good-first-issue labels
+             created — the §12 issue counts are live). CI green on all three OSes.
+             Release v0.1.0 (tag-driven release.yml) is published with 19 assets:
+             per-app NSIS + suite NSIS (Windows), per-app .dmg + suite universal
+             .dmg (macOS), per-app .deb/.AppImage + suite .deb (Linux). App
+             versions bumped 0.0.0→0.1.0; build-suite.ps1 now honours $env:VERSION
+             (was hardcoded 0.0.0 — the sh scripts already read it). Pipeline
+             fixes found by the test: release.yml needs `permissions: contents:
+             write` (default token is read-only → 403 creating the release), and
+             the release-asset globs are extension-restricted (a bare dmg/* glob
+             matched four identically-named Tauri helper bundle_dmg.sh files →
+             the macOS attach step 404'd after the first upload). |
+             Completes the §9 Phase 4 "public, installable" deliverable and proves
+             the macOS/Linux suite scripts + the launcher's macOS branch (all ran
+             first try in CI). |
+             SUPERSEDES the 2026-06-04 "MSI builds in CI — the path was the only
+             blocker" claim: WiX light.exe FAILS on the space-free CI checkout
+             too (cause unknown — Tauri swallows light's stderr). MSI is disabled
+             in release.yml; NSIS is the §3.2 Windows deliverable. Tracked in
+             github issue #1 (bug, p2) with debugging steps (--verbose run,
+             leading-digit/space productName, ICE validation). NOTE: macos-latest
+             is arm64, so the per-app .dmg assets are aarch64-only (Intel macs
+             unserved; an x86_64 or true-universal build is a follow-up).
 ```
 
 ---
