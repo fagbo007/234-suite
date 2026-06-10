@@ -4,10 +4,10 @@ name: Release
 # on a version tag, attaches them to a GitHub Release (root CLAUDE.md §3.2, §9).
 # Like ci.yml, this is dormant until a public remote + a `v*` tag exist.
 #
-# Per OS: Windows → NSIS (MSI is disabled: WiX light.exe fails even on the
-# space-free CI checkout — see issue #1); macOS → .app + .dmg;
-# Linux → .deb + .AppImage. Then the matching suite-assembly script bundles
-# all four apps.
+# Per OS: Windows → NSIS + MSI (MSI needs the explicit bundle.publisher —
+# a derived numeric "234" author fails WiX ICE39, see issue #1); macOS →
+# .app + .dmg (universal); Linux → .deb + .AppImage. Then the matching
+# suite-assembly script bundles all four apps.
 
 on:
   push:
@@ -27,7 +27,7 @@ jobs:
       matrix:
         include:
           - os: windows-latest
-            bundles: nsis
+            bundles: nsis,msi
             suite: pwsh installer/build-suite.ps1
           # macos-latest is arm64; the universal target also serves Intel macs.
           - os: macos-latest

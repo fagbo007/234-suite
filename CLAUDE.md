@@ -1415,6 +1415,33 @@ Format: `YYYY-MM-DD | Decision | Rationale | Alternatives considered`
              leading-digit/space productName, ICE validation). NOTE: macos-latest
              is arm64, so the per-app .dmg assets are aarch64-only (Intel macs
              unserved; an x86_64 or true-universal build is a follow-up).
+
+2026-06-10 | RESOLVES both follow-ups from the entry above. (1) MSI root cause
+             (closes github issue #1): a temporary verbose dispatch workflow
+             surfaced WiX "LGHT0204 ICE39: Bad Type in Summary Information
+             Stream for PID_AUTHOR" — with no bundle.publisher, Tauri derives
+             the MSI Author from the identifier (app.234.writer → "234"), and a
+             purely NUMERIC author is written to the MSI summary stream as an
+             integer, failing ICE39 string validation at the light.exe link. The
+             path (spaces or not) was never the cause — the project's numeric
+             name was; it failed identically everywhere. Fix: explicit
+             "publisher": "234 Suite" in all four tauri.conf.json; MSI verified
+             green and re-enabled in release.yml (nsis,msi). (2) Intel macs: the
+             macOS release leg now builds --target universal-apple-darwin
+             (rustup x86_64+aarch64 targets on the arm64 runner — no Intel
+             runner needed; GitHub is phasing those out). build-suite-macos.sh
+             prefers the triple-nested bundle dir; artifact/release globs
+             updated; the suite dmg's "universal" name is now true. Verified by
+             a dispatched release.yml run — all three OS legs green (dispatch
+             skips the attach step, so the published v0.1.0 was untouched). |
+             The Windows deliverable set is now NSIS + MSI and the macOS .dmg
+             assets serve both Intel and Apple Silicon — both 2026-06-10
+             release-pipeline caveats are gone. |
+             Alternatives: macos-13 Intel runner matrix leg (rejected —
+             deprecated/being retired); skipping ICE validation for MSI
+             (rejected — the publisher fix addresses the cause, not the
+             messenger). The next v* tag exercises the full fixed pipeline;
+             assets on the existing v0.1.0 release remain aarch64-only/no-MSI.
 ```
 
 ---
