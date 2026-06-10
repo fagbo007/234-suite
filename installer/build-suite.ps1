@@ -11,7 +11,7 @@
 
 $ErrorActionPreference = 'Stop'
 
-$version = '0.0.0'
+$version = if ($env:VERSION) { $env:VERSION } else { '0.0.0' }
 $repo = Split-Path -Parent $PSScriptRoot
 $distDir = Join-Path $PSScriptRoot 'dist'
 $script = Join-Path $PSScriptRoot '234-suite.nsi'
