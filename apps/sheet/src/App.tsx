@@ -10,9 +10,11 @@ import { exportXlsx, importXlsx, type ImportReport } from '@234/compat';
 import {
   addRecent,
   baseName,
+  extensionOf,
   isDesktop,
   pickOpenPath,
   pickSavePath,
+  readBinaryFile,
   readTextFile,
   useRecentFiles,
   writeTextFile,
@@ -53,6 +55,9 @@ type Panel = 'none' | 'column' | 'links' | 'chart' | 'conditional' | 'validation
 const BUILTIN_PLUGINS: Plugin[] = [sampleProviderPlugin];
 
 const FWSH_FILTER = { name: '234 Sheet', extensions: ['fwsh'] };
+// The one Open dialog accepts the native format and Excel imports alike; .xlsx
+// is routed through the @234/compat import path (with its fidelity report).
+const OPEN_FILTER = { name: '234 Sheet documents', extensions: ['fwsh', 'xlsx'] };
 
 export default function App() {
   const palette = useCommandPalette();
@@ -132,13 +137,31 @@ export default function App() {
     });
   }, [engine]);
 
-  // Open a native .fwsh → load cells + (best-effort) the sidecar meta. With a
-  // `path` (from the recent-files list) it re-reads directly, skipping the dialog.
+  // .xlsx bytes → replace the sheet's cells (via @234/compat) + show the report.
+  const applyXlsx = useCallback(
+    (bytes: Uint8Array) => {
+      const { cells, report } = importXlsx(bytes);
+      engine.destroy();
+      applyCells(engine, cells);
+      setImportReport(report);
+      bump();
+    },
+    [engine, bump],
+  );
+
+  // Open a spreadsheet: native .fwsh loads cells + (best-effort) the sidecar
+  // meta; an .xlsx is routed through the import path. With a `path` (from the
+  // recent-files list) it re-reads directly, skipping the dialog.
   const openFwsh = useCallback(
     (recentPath?: string) => {
     void (async () => {
-      const path = recentPath ?? (await pickOpenPath(FWSH_FILTER));
+      const path = recentPath ?? (await pickOpenPath(OPEN_FILTER));
       if (!path) return;
+      if (extensionOf(path) === 'xlsx') {
+        applyXlsx(await readBinaryFile(path));
+        if (isDesktop()) addRecent('sheet', { path, name: baseName(path) });
+        return;
+      }
       const csv = await readTextFile(path);
       engine.destroy();
       applyCells(engine, parseFwshCsv(csv));
@@ -160,7 +183,7 @@ export default function App() {
       bump();
     })();
     },
-    [engine, bump],
+    [engine, bump, applyXlsx],
   );
 
   // Load the enabled in-tree plugins; re-runs when the user toggles one.
@@ -174,7 +197,7 @@ export default function App() {
     [plugins.enabledPlugins],
   );
 
-  // Open an .xlsx → replace the sheet's cells (via @234/compat) + show the report.
+  // Open an .xlsx directly (kept alongside the unified Open for discoverability).
   const openXlsx = useCallback(() => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -182,16 +205,10 @@ export default function App() {
     input.onchange = () => {
       const file = input.files?.[0];
       if (!file) return;
-      void file.arrayBuffer().then((buffer) => {
-        const { cells, report } = importXlsx(new Uint8Array(buffer));
-        engine.destroy();
-        applyCells(engine, cells);
-        setImportReport(report);
-        bump();
-      });
+      void file.arrayBuffer().then((buffer) => applyXlsx(new Uint8Array(buffer)));
     };
     input.click();
-  }, [engine, bump]);
+  }, [applyXlsx]);
 
   // Export the used range to a downloadable .xlsx.
   const handleExportXlsx = useCallback(() => {

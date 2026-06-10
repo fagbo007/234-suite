@@ -25,6 +25,12 @@ pub fn write_text(path: &str, contents: &str) -> Result<(), String> {
     fs::write(path, contents).map_err(|err| format!("Could not write {path}: {err}"))
 }
 
+/// Read a file's raw bytes (for binary formats like `.docx`/`.xlsx`/`.pptx`,
+/// which the unified Open dialog routes through the import path).
+pub fn read_bytes(path: &str) -> Result<Vec<u8>, String> {
+    fs::read(path).map_err(|err| format!("Could not read {path}: {err}"))
+}
+
 fn with_filter(mut dialog: FileDialog, filter_name: &str, extensions: &[String]) -> FileDialog {
     if !extensions.is_empty() {
         let refs: Vec<&str> = extensions.iter().map(String::as_str).collect();
@@ -71,6 +77,26 @@ mod tests {
     #[test]
     fn read_missing_file_errors() {
         let err = read_text("does-not-exist-app234.txt").unwrap_err();
+        assert!(err.contains("Could not read"));
+    }
+
+    #[test]
+    fn read_bytes_round_trips_binary() {
+        let mut path = std::env::temp_dir();
+        path.push(format!("app234-files-bin-test-{}.bin", std::process::id()));
+        let p = path.to_string_lossy().into_owned();
+
+        // Not valid UTF-8 — read_text would fail on this; read_bytes must not.
+        let data: Vec<u8> = vec![0x50, 0x4b, 0x03, 0x04, 0xff, 0xfe, 0x00];
+        fs::write(&p, &data).expect("write");
+        assert_eq!(read_bytes(&p).expect("read"), data);
+
+        let _ = fs::remove_file(&p);
+    }
+
+    #[test]
+    fn read_bytes_missing_file_errors() {
+        let err = read_bytes("does-not-exist-app234.bin").unwrap_err();
         assert!(err.contains("Could not read"));
     }
 }

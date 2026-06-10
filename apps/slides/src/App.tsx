@@ -10,8 +10,10 @@ import { exportPptx, importPptx, type ImportReport } from '@234/compat';
 import {
   addRecent,
   baseName,
+  extensionOf,
   isDesktop,
-  openTextFile,
+  openDocumentFile,
+  readBinaryFile,
   readTextFile,
   saveTextFile,
   useRecentFiles,
@@ -71,6 +73,9 @@ function makeAiText(text: string): SlideObject {
 const BUILTIN_PLUGINS: Plugin[] = [sampleProviderPlugin];
 
 const FWSL_FILTER = { name: '234 Slides', extensions: ['fwsl'] };
+// The one Open dialog accepts the native format and PowerPoint imports alike;
+// .pptx is routed through the @234/compat import path (with its fidelity report).
+const OPEN_FILTER = { name: '234 Slides documents', extensions: ['fwsl', 'pptx'] };
 
 export default function App() {
   const palette = useCommandPalette();
@@ -182,23 +187,43 @@ export default function App() {
     });
   }, [recordRecent]);
 
-  // Open a native .fwsl → replace the deck. With a `path` (from the recent-files
-  // list) it re-reads directly, skipping the dialog.
-  const loadFwsl = useCallback(
+  // .pptx bytes → replace the deck (via @234/compat) + show the import report.
+  const applyPptx = useCallback((bytes: Uint8Array) => {
+    const { deck: pptx, report } = importPptx(bytes);
+    const model = pptxDeckToModel(pptx);
+    if (model.slides.length > 0) {
+      setActiveIndex(0);
+      setDeck(model);
+    }
+    setImportReport(report);
+  }, []);
+
+  // Open a deck: native .fwsl replaces the deck; a .pptx is routed through the
+  // import path. With a `path` (from the recent-files list) it re-reads
+  // directly, skipping the dialog.
+  const loadDocument = useCallback(
     async (path?: string) => {
-      const result = path ? { path, contents: await readTextFile(path) } : await openTextFile({ filter: FWSL_FILTER });
+      const result = path
+        ? extensionOf(path) === 'pptx'
+          ? { path, bytes: await readBinaryFile(path) }
+          : { path, text: await readTextFile(path) }
+        : await openDocumentFile({ filter: OPEN_FILTER, binaryExtensions: ['pptx'] });
       if (!result) return;
-      const deck = parseFwsl(result.contents);
-      if (deck.slides.length > 0) {
-        setActiveIndex(0);
-        setDeck(deck);
+      if (result.bytes) {
+        applyPptx(result.bytes);
+      } else {
+        const deck = parseFwsl(result.text ?? '');
+        if (deck.slides.length > 0) {
+          setActiveIndex(0);
+          setDeck(deck);
+        }
       }
       recordRecent(result.path);
     },
-    [recordRecent],
+    [applyPptx, recordRecent],
   );
 
-  // Open a .pptx → replace the deck (via @234/compat) + show the import report.
+  // Open a .pptx directly (kept alongside the unified Open for discoverability).
   const openPptx = useCallback(() => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -206,18 +231,10 @@ export default function App() {
     input.onchange = () => {
       const file = input.files?.[0];
       if (!file) return;
-      void file.arrayBuffer().then((buffer) => {
-        const { deck: pptx, report } = importPptx(new Uint8Array(buffer));
-        const model = pptxDeckToModel(pptx);
-        if (model.slides.length > 0) {
-          setActiveIndex(0);
-          setDeck(model);
-        }
-        setImportReport(report);
-      });
+      void file.arrayBuffer().then((buffer) => applyPptx(new Uint8Array(buffer)));
     };
     input.click();
-  }, []);
+  }, [applyPptx]);
 
   // Export the deck to a downloadable .pptx.
   const handleExportPptx = useCallback(() => {
@@ -239,7 +256,7 @@ export default function App() {
       registerCommand({ id: 'slides.add-text', title: 'Add text', group: 'Insert', run: () => insert(makeText) }),
       registerCommand({ id: 'slides.add-rect', title: 'Add rectangle', group: 'Insert', run: () => insert(makeRect) }),
       registerCommand({ id: 'slides.import-image', title: 'Import image', group: 'Insert', run: () => importImage() }),
-      registerCommand({ id: 'slides.open', title: 'Open', group: 'File', run: () => void loadFwsl() }),
+      registerCommand({ id: 'slides.open', title: 'Open', group: 'File', run: () => void loadDocument() }),
       registerCommand({ id: 'slides.save', title: 'Save', group: 'File', run: saveFwsl }),
       registerCommand({ id: 'slides.recent', title: 'Open recent', group: 'File', run: () => setRecentOpen(true) }),
       registerCommand({ id: 'slides.open-pptx', title: 'Open .pptx', group: 'File', run: openPptx }),
@@ -270,7 +287,7 @@ export default function App() {
     return () => {
       for (const remove of unregister) remove();
     };
-  }, [insert, tidy, importImage, ai, openPptx, handleExportPptx, loadFwsl, saveFwsl]);
+  }, [insert, tidy, importImage, ai, openPptx, handleExportPptx, loadDocument, saveFwsl]);
 
   const handleAdd = () => {
     setActiveIndex(deck.slides.length);
@@ -314,7 +331,7 @@ export default function App() {
             {issueCount} layout {issueCount === 1 ? 'issue' : 'issues'}
           </span>
         ) : null}
-        <Button variant="ghost" onClick={() => void loadFwsl()}>
+        <Button variant="ghost" onClick={() => void loadDocument()}>
           Open
         </Button>
         <Button variant="ghost" onClick={saveFwsl}>
@@ -367,7 +384,7 @@ export default function App() {
         />
       ) : null}
       {recentOpen ? (
-        <RecentFiles items={recents.items} onOpen={(path) => void loadFwsl(path)} onClear={recents.clear} />
+        <RecentFiles items={recents.items} onOpen={(path) => void loadDocument(path)} onClear={recents.clear} />
       ) : null}
       <div className={styles.workspace}>
         <SlidePanel

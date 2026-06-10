@@ -4,13 +4,17 @@
 export {
   type FileFilter,
   type OpenResult,
+  type OpenDocumentResult,
   isDesktop,
   pickOpenPath,
   pickSavePath,
   readTextFile,
+  readBinaryFile,
   writeTextFile,
   openTextFile,
+  openDocumentFile,
   saveTextFile,
+  extensionOf,
 } from './files';
 export {
   type RecentFile,

@@ -1,5 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { isDesktop, openTextFile, saveTextFile, writeTextFile } from './files';
+import {
+  extensionOf,
+  isDesktop,
+  openDocumentFile,
+  openTextFile,
+  readBinaryFile,
+  saveTextFile,
+  writeTextFile,
+} from './files';
 
 const invoke = vi.fn();
 vi.mock('@tauri-apps/api/core', () => ({
@@ -86,6 +94,59 @@ describe('writeTextFile (desktop)', () => {
       path: 'C:/docs/out.fwsh.meta',
       contents: '{}',
     });
+  });
+});
+
+describe('extensionOf', () => {
+  it('lower-cases and handles missing extensions', () => {
+    expect(extensionOf('C:/docs/Report.DOCX')).toBe('docx');
+    expect(extensionOf('a.fwtr')).toBe('fwtr');
+    expect(extensionOf('no-extension')).toBe('');
+  });
+});
+
+describe('readBinaryFile (desktop)', () => {
+  it('invokes fs_read_bytes and returns a Uint8Array', async () => {
+    setDesktop(true);
+    invoke.mockResolvedValue([80, 75, 3, 4]);
+    const bytes = await readBinaryFile('C:/docs/a.docx');
+    expect(bytes).toEqual(Uint8Array.from([80, 75, 3, 4]));
+    expect(invoke).toHaveBeenCalledWith('fs_read_bytes', { path: 'C:/docs/a.docx' });
+  });
+});
+
+describe('openDocumentFile (desktop)', () => {
+  const unified = { name: '234 Writer', extensions: ['fwtr', 'docx'] };
+
+  it('reads a native pick as text', async () => {
+    setDesktop(true);
+    invoke.mockImplementation((cmd: string) => {
+      if (cmd === 'fs_pick_open') return Promise.resolve('C:/docs/a.fwtr');
+      if (cmd === 'fs_read_text') return Promise.resolve('file body');
+      return Promise.resolve(null);
+    });
+    const result = await openDocumentFile({ filter: unified, binaryExtensions: ['docx'] });
+    expect(result).toEqual({ path: 'C:/docs/a.fwtr', text: 'file body' });
+  });
+
+  it('reads an Office pick as bytes', async () => {
+    setDesktop(true);
+    invoke.mockImplementation((cmd: string) => {
+      if (cmd === 'fs_pick_open') return Promise.resolve('C:/docs/Report.DOCX');
+      if (cmd === 'fs_read_bytes') return Promise.resolve([80, 75]);
+      return Promise.resolve(null);
+    });
+    const result = await openDocumentFile({ filter: unified, binaryExtensions: ['docx'] });
+    expect(result?.path).toBe('C:/docs/Report.DOCX');
+    expect(result?.bytes).toEqual(Uint8Array.from([80, 75]));
+    expect(result?.text).toBeUndefined();
+  });
+
+  it('returns null when the dialog is cancelled', async () => {
+    setDesktop(true);
+    invoke.mockResolvedValue(null);
+    expect(await openDocumentFile({ filter: unified, binaryExtensions: ['docx'] })).toBeNull();
+    expect(invoke).toHaveBeenCalledTimes(1); // no read
   });
 });
 

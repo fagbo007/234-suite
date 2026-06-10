@@ -10,8 +10,10 @@ import { exportDocx, importDocx, type ImportReport } from '@234/compat';
 import {
   addRecent,
   baseName,
+  extensionOf,
   isDesktop,
-  openTextFile,
+  openDocumentFile,
+  readBinaryFile,
   readTextFile,
   saveTextFile,
   useRecentFiles,
@@ -55,6 +57,9 @@ import { bindStyles, type StylesBinding } from './collab/bindStyles';
 const BUILTIN_PLUGINS: Plugin[] = [sampleProviderPlugin];
 
 const FWTR_FILTER = { name: '234 Writer', extensions: ['fwtr'] };
+// The one Open dialog accepts the native format and Word imports alike; .docx
+// is routed through the @234/compat import path (with its fidelity report).
+const OPEN_FILTER = { name: '234 Writer documents', extensions: ['fwtr', 'docx'] };
 
 export default function App() {
   const palette = useCommandPalette();
@@ -106,7 +111,19 @@ export default function App() {
     input.click();
   }, []);
 
-  // Open a .docx → Markdown (via @234/compat) → replace the editor doc + report.
+  // .docx bytes → Markdown (via @234/compat) → replace the editor doc + report.
+  const applyDocx = useCallback((bytes: Uint8Array) => {
+    const { markdown, report } = importDocx(bytes);
+    const current = viewRef.current;
+    if (current) {
+      const doc = markdownToDoc(markdown);
+      current.dispatch(current.state.tr.replaceWith(0, current.state.doc.content.size, doc.content));
+      current.focus();
+    }
+    setImportReport(report);
+  }, []);
+
+  // Open a .docx directly (kept alongside the unified Open for discoverability).
   const openDocx = useCallback(() => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -114,19 +131,10 @@ export default function App() {
     input.onchange = () => {
       const file = input.files?.[0];
       if (!file) return;
-      void file.arrayBuffer().then((buffer) => {
-        const { markdown, report } = importDocx(new Uint8Array(buffer));
-        const current = viewRef.current;
-        if (current) {
-          const doc = markdownToDoc(markdown);
-          current.dispatch(current.state.tr.replaceWith(0, current.state.doc.content.size, doc.content));
-          current.focus();
-        }
-        setImportReport(report);
-      });
+      void file.arrayBuffer().then((buffer) => applyDocx(new Uint8Array(buffer)));
     };
     input.click();
-  }, []);
+  }, [applyDocx]);
 
   // Record a recently opened/saved file (desktop only — a web "path" is just a
   // file name with no re-readable handle).
@@ -148,22 +156,31 @@ export default function App() {
     });
   }, [recordRecent]);
 
-  // Open a native .fwtr → replace the editor doc + style registry. With a `path`
-  // (from the recent-files list) it re-reads directly, skipping the dialog.
-  const loadFwtr = useCallback(
+  // Open a document: native .fwtr replaces the doc + style registry; a .docx is
+  // routed through the import path. With a `path` (from the recent-files list)
+  // it re-reads directly, skipping the dialog.
+  const loadDocument = useCallback(
     async (path?: string) => {
-      const result = path ? { path, contents: await readTextFile(path) } : await openTextFile({ filter: FWTR_FILTER });
+      const result = path
+        ? extensionOf(path) === 'docx'
+          ? { path, bytes: await readBinaryFile(path) }
+          : { path, text: await readTextFile(path) }
+        : await openDocumentFile({ filter: OPEN_FILTER, binaryExtensions: ['docx'] });
       if (!result) return;
-      const { doc, styles } = parseFwtr(result.contents);
-      const current = viewRef.current;
-      if (current) {
-        current.dispatch(current.state.tr.replaceWith(0, current.state.doc.content.size, doc.content));
-        current.focus();
+      if (result.bytes) {
+        applyDocx(result.bytes);
+      } else {
+        const { doc, styles } = parseFwtr(result.text ?? '');
+        const current = viewRef.current;
+        if (current) {
+          current.dispatch(current.state.tr.replaceWith(0, current.state.doc.content.size, doc.content));
+          current.focus();
+        }
+        setRegistry(styles);
       }
-      setRegistry(styles);
       recordRecent(result.path);
     },
-    [recordRecent],
+    [applyDocx, recordRecent],
   );
 
   // Export the current document to a downloadable .docx.
@@ -236,7 +253,7 @@ export default function App() {
 
   useEffect(() => {
     const unregister = [
-      registerCommand({ id: 'writer.open', title: 'Open', group: 'File', run: () => void loadFwtr() }),
+      registerCommand({ id: 'writer.open', title: 'Open', group: 'File', run: () => void loadDocument() }),
       registerCommand({ id: 'writer.save', title: 'Save', group: 'File', run: saveFwtr }),
       registerCommand({ id: 'writer.recent', title: 'Open recent', group: 'File', run: () => setRecentOpen(true) }),
       registerCommand({ id: 'writer.find', title: 'Find and replace', group: 'Edit', run: () => setFindOpen(true) }),
@@ -252,7 +269,7 @@ export default function App() {
     return () => {
       for (const remove of unregister) remove();
     };
-  }, [pickImage, openDocx, handleExportDocx, loadFwtr, saveFwtr, ai]);
+  }, [pickImage, openDocx, handleExportDocx, loadDocument, saveFwtr, ai]);
 
   const applyStyle = (styleId: string) => {
     if (view) applyStyleToSelection(view, styleId);
@@ -263,7 +280,7 @@ export default function App() {
       <header className={styles.header}>
         <h1 className={styles.title}>234 Writer</h1>
         <div className={styles.actions}>
-          <Button variant="ghost" onClick={() => void loadFwtr()}>
+          <Button variant="ghost" onClick={() => void loadDocument()}>
             Open
           </Button>
           <Button variant="ghost" onClick={saveFwtr}>
@@ -317,7 +334,7 @@ export default function App() {
       ) : null}
 
       {recentOpen ? (
-        <RecentFiles items={recents.items} onOpen={(path) => void loadFwtr(path)} onClear={recents.clear} />
+        <RecentFiles items={recents.items} onOpen={(path) => void loadDocument(path)} onClear={recents.clear} />
       ) : null}
 
       <div className={styles.workspace}>

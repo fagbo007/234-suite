@@ -17,6 +17,16 @@ export interface OpenResult {
   contents: string;
 }
 
+/**
+ * Result of the unified Open dialog: native (text) formats land in `text`,
+ * Office (binary) formats land in `bytes` — exactly one is set.
+ */
+export interface OpenDocumentResult {
+  path: string;
+  text?: string;
+  bytes?: Uint8Array;
+}
+
 /** True only inside the Tauri desktop shell. */
 export function isDesktop(): boolean {
   return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
@@ -49,6 +59,19 @@ export async function writeTextFile(path: string, contents: string): Promise<voi
   await invoke('fs_write_text', { path, contents });
 }
 
+/** Read a file's raw bytes (binary formats like .docx/.xlsx/.pptx). */
+export async function readBinaryFile(path: string): Promise<Uint8Array> {
+  const result = await invoke<number[] | ArrayBuffer>('fs_read_bytes', { path });
+  return result instanceof ArrayBuffer ? new Uint8Array(result) : Uint8Array.from(result);
+}
+
+/** Lower-cased extension of a path (without the dot), or '' if none. */
+export function extensionOf(path: string): string {
+  const dot = path.lastIndexOf('.');
+  if (dot < 0) return '';
+  return path.slice(dot + 1).toLowerCase();
+}
+
 // --- Convenience (dialog + read/write; browser fallback off-desktop) ---------
 
 /** Pick a file and read it. Returns null if the user cancels. */
@@ -76,6 +99,27 @@ export async function saveTextFile(opts: {
   return saveViaBrowser(opts.defaultName, opts.contents);
 }
 
+/**
+ * Unified Open: one dialog accepting both the native format and Office imports.
+ * Extensions listed in `binaryExtensions` are read as bytes (for the compat
+ * import path); everything else is read as text. Returns null on cancel.
+ */
+export async function openDocumentFile(opts: {
+  filter: FileFilter;
+  binaryExtensions?: string[];
+}): Promise<OpenDocumentResult | null> {
+  const binary = (opts.binaryExtensions ?? []).map((ext) => ext.toLowerCase());
+  if (isDesktop()) {
+    const path = await pickOpenPath(opts.filter);
+    if (!path) return null;
+    if (binary.includes(extensionOf(path))) {
+      return { path, bytes: await readBinaryFile(path) };
+    }
+    return { path, text: await readTextFile(path) };
+  }
+  return openDocumentViaBrowser(opts.filter, binary);
+}
+
 // --- Web fallbacks (browser dev build) ---------------------------------------
 
 function openViaBrowser(filter: FileFilter): Promise<OpenResult | null> {
@@ -94,6 +138,39 @@ function openViaBrowser(filter: FileFilter): Promise<OpenResult | null> {
       const reader = new FileReader();
       reader.onload = () =>
         resolve({ path: file.name, contents: typeof reader.result === 'string' ? reader.result : '' });
+      reader.onerror = () => resolve(null);
+      reader.readAsText(file);
+    };
+    input.click();
+  });
+}
+
+function openDocumentViaBrowser(
+  filter: FileFilter,
+  binaryExtensions: string[],
+): Promise<OpenDocumentResult | null> {
+  return new Promise((resolve) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    if (filter.extensions.length > 0) {
+      input.accept = filter.extensions.map((ext) => `.${ext}`).join(',');
+    }
+    input.onchange = () => {
+      const file = input.files?.[0];
+      if (!file) {
+        resolve(null);
+        return;
+      }
+      if (binaryExtensions.includes(extensionOf(file.name))) {
+        void file
+          .arrayBuffer()
+          .then((buffer) => resolve({ path: file.name, bytes: new Uint8Array(buffer) }))
+          .catch(() => resolve(null));
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () =>
+        resolve({ path: file.name, text: typeof reader.result === 'string' ? reader.result : '' });
       reader.onerror = () => resolve(null);
       reader.readAsText(file);
     };

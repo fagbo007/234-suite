@@ -1442,6 +1442,35 @@ Format: `YYYY-MM-DD | Decision | Rationale | Alternatives considered`
              (rejected — the publisher fix addresses the cause, not the
              messenger). The next v* tag exercises the full fixed pipeline;
              assets on the existing v0.1.0 release remain aarch64-only/no-MSI.
+
+2026-06-10 | Unified Open (user feedback from the v0.1.1 smoke test: "234 can't
+             open Word documents" — the capability existed but only behind the
+             separate "Open .docx" button, so Open's .fwtr-only dialog read as
+             "unsupported"): each app's one Open dialog now accepts the native
+             format AND its Office twin (fwtr+docx / fwsh+xlsx / fwsl+pptx),
+             branching by extension — native reads as before; Office files are
+             read as BYTES and routed through the existing @234/compat import
+             path with its fidelity report (§7 intact). Plumbing: app234_files
+             gains read_bytes (std::fs::read; non-UTF-8-safe), each app backend
+             a fs_read_bytes command; @234/desktop gains readBinaryFile +
+             extensionOf + openDocumentFile({filter, binaryExtensions}) →
+             {path, text?|bytes?} with a matching <input type=file> web
+             fallback (arrayBuffer for binary picks). Writer/Slides
+             loadFwtr/loadFwsl → loadDocument; Sheet's openFwsh branches before
+             its CSV+sidecar path; recents record Office paths too (re-open
+             re-imports via the same extension branch). The dedicated "Open
+             .docx/.xlsx/.pptx" buttons stay for discoverability. |
+             A consumer evaluating "can this replace Word?" clicks Open, sees
+             no .docx, and concludes no — the unified dialog fixes the
+             discoverability gap while keeping the lossless-open vs
+             lossy-import boundary honest (the import report still appears). |
+             Alternatives: drop the dedicated import buttons (rejected —
+             harmless, discoverable); auto-open Office files losslessly
+             (impossible — import is a conversion by §7). Verified: file-io 4
+             cargo tests (+2 binary), desktop 17 (+5: extensionOf/readBinary/
+             openDocumentFile), cargo check on all three backends, full JS
+             suite green, checks 0/0. The real OS-dialog pick of a .docx is a
+             manual desktop step (issue #10).
 ```
 
 ---

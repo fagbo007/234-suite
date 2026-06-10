@@ -53,6 +53,11 @@ fn fs_write_text(path: String, contents: String) -> Result<(), String> {
     app234_files::write_text(&path, &contents)
 }
 
+#[tauri::command]
+fn fs_read_bytes(path: String) -> Result<Vec<u8>, String> {
+    app234_files::read_bytes(&path)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -64,6 +69,7 @@ pub fn run() {
             fs_pick_open,
             fs_pick_save,
             fs_read_text,
+            fs_read_bytes,
             fs_write_text
         ])
         .run(tauri::generate_context!())
